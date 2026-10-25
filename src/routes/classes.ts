@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { AuthRequest, authGuard } from "../middleware/auth.js";
 import { db } from "../db.js";
+import { classSchema } from "../schemas.js";
 
 const router = Router();
 
@@ -23,12 +24,18 @@ router.get("/", authGuard, (req: AuthRequest, res: Response) => {
 // Create new class
 router.post("/", authGuard, (req: AuthRequest, res: Response) => {
   const lecturerId = req.user!.id;
-  const { code, title, sks, prodi, semester, capacity, schedule, room } = req.body;
 
-  // Early guard
-  if (!code || !title || !prodi) {
-    return res.status(400).json({ error: "Kode mata kuliah, nama kelas, dan program studi wajib diisi." });
+  // Validasi skema bersama (safeParse di server)
+  const validation = classSchema.safeParse(req.body);
+  if (!validation.success) {
+    const fieldErrors = validation.error.flatten().fieldErrors;
+    return res.status(400).json({
+      error: "Validasi data gagal. Periksa kembali input Anda.",
+      fieldErrors,
+    });
   }
+
+  const { code, title, sks, prodi, semester, capacity, schedule, room } = validation.data;
 
   const stmt = db.prepare(`
     INSERT INTO classes (lecturer_id, code, title, sks, prodi, semester, capacity, schedule, room)
