@@ -27,13 +27,22 @@ Default URL: `http://localhost:5000`
 
 ---
 
-## 🔑 Kredensial Default Dosen (Auto-Seeded)
+## 🔑 Kredensial Default
 
+### 1. Akun Superadmin (Administrator Akademik)
+- **Portal Login**: `http://localhost:3000/admin/login`
+- **Username**: `admin`
+- **Email**: `admin@gradia.ac.id`
+- **Password**: `adminpassword123`
+
+### 2. Akun Dosen
+- **Portal Login**: `http://localhost:3000/auth/login`
 - **NIDN**: `0412068201`
 - **Email**: `hendra@kampus.ac.id`
 - **Password**: `secretpassword123`
 
 ---
+
 
 ## 📡 Daftar Endpoint API
 
