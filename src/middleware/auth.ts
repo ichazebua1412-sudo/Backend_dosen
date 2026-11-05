@@ -51,3 +51,24 @@ export function adminGuard(req: AuthRequest, res: Response, next: NextFunction):
   }
 }
 
+export function studentGuard(req: AuthRequest, res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Akses ditolak. Silakan login sebagai mahasiswa." });
+    return;
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (decoded.role !== "student") {
+      res.status(403).json({ error: "Akses terlarang. Hanya mahasiswa yang berhak mengakses fitur ini." });
+      return;
+    }
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: "Sesi mahasiswa telah berakhir atau token tidak valid." });
+  }
+}
+

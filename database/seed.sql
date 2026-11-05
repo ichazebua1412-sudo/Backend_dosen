@@ -43,14 +43,19 @@ VALUES
     'active'
 );
 
--- 3. SEED MAHASISWA (STUDENTS)
-INSERT OR IGNORE INTO students (nim, name, email, prodi, status)
+-- 3. SEED MAHASISWA (STUDENTS) (password123)
+INSERT OR IGNORE INTO students (nim, name, email, password_hash, prodi, status)
 VALUES
-('22010101', 'Siti Rahma', 'siti.rahma@student.gradia.ac.id', 'Teknik Informatika', 'Aktif'),
-('22010102', 'Ahmad Fauzi', 'ahmad.fauzi@student.gradia.ac.id', 'Teknik Informatika', 'Aktif'),
-('22010103', 'Dewi Lestari', 'dewi.lestari@student.gradia.ac.id', 'Teknik Informatika', 'Aktif'),
-('22010104', 'Rian Pratama', 'rian.pratama@student.gradia.ac.id', 'Teknik Informatika', 'Aktif'),
-('22020201', 'Citra Kirana', 'citra.kirana@student.gradia.ac.id', 'Sistem Informasi', 'Aktif');
+('251234567899', 'Sinta Permata', 'sinta@kampus.ac.id', '$2b$10$K2K8WxZHFbU04LaxiJPK4OvP.nXJqfst7X8OX5O6ERIUzDnqDQxuu', 'Teknik Informatika', 'Aktif'),
+('22010101', 'Siti Rahma', 'siti.rahma@student.gradia.ac.id', '$2b$10$K2K8WxZHFbU04LaxiJPK4OvP.nXJqfst7X8OX5O6ERIUzDnqDQxuu', 'Teknik Informatika', 'Aktif'),
+('22010102', 'Ahmad Fauzi', 'ahmad.fauzi@student.gradia.ac.id', '$2b$10$K2K8WxZHFbU04LaxiJPK4OvP.nXJqfst7X8OX5O6ERIUzDnqDQxuu', 'Teknik Informatika', 'Aktif'),
+('22010103', 'Dewi Lestari', 'dewi.lestari@student.gradia.ac.id', '$2b$10$K2K8WxZHFbU04LaxiJPK4OvP.nXJqfst7X8OX5O6ERIUzDnqDQxuu', 'Teknik Informatika', 'Aktif'),
+('22010104', 'Rian Pratama', 'rian.pratama@student.gradia.ac.id', '$2b$10$K2K8WxZHFbU04LaxiJPK4OvP.nXJqfst7X8OX5O6ERIUzDnqDQxuu', 'Teknik Informatika', 'Aktif'),
+('22020201', 'Citra Kirana', 'citra.kirana@student.gradia.ac.id', '$2b$10$K2K8WxZHFbU04LaxiJPK4OvP.nXJqfst7X8OX5O6ERIUzDnqDQxuu', 'Sistem Informasi', 'Aktif');
+
+-- Pastikan password_hash terupdate jika record mahasiswa sudah ada sebelumnya
+UPDATE students SET password_hash = '$2b$10$K2K8WxZHFbU04LaxiJPK4OvP.nXJqfst7X8OX5O6ERIUzDnqDQxuu'
+WHERE password_hash IS NULL OR password_hash = '';
 
 -- 4. SEED KELAS DENGAN FOREIGN KEY DOSEN
 INSERT OR IGNORE INTO classes (lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room)
@@ -72,19 +77,45 @@ AND NOT EXISTS (SELECT 1 FROM classes WHERE code = 'SI102');
 INSERT OR IGNORE INTO class_enrollments (class_id, student_id)
 SELECT c.id, s.id
 FROM classes c, students s
-WHERE c.code = 'IF2408' AND s.nim IN ('22010101', '22010102', '22010103', '22010104');
+WHERE c.code = 'IF2408' AND s.nim IN ('251234567899', '22010101', '22010102', '22010103', '22010104');
 
 INSERT OR IGNORE INTO class_enrollments (class_id, student_id)
 SELECT c.id, s.id
 FROM classes c, students s
-WHERE c.code = 'IF301' AND s.nim IN ('22010101', '22010102');
+WHERE c.code = 'IF301' AND s.nim IN ('251234567899', '22010101', '22010102');
 
 INSERT OR IGNORE INTO class_enrollments (class_id, student_id)
 SELECT c.id, s.id
 FROM classes c, students s
-WHERE c.code = 'SI102' AND s.nim = '22020201';
+WHERE c.code = 'SI102' AND s.nim IN ('251234567899', '22020201');
 
 -- 6. SEED NILAI & AI FEEDBACK
+-- Sinta Permata
+INSERT OR IGNORE INTO grades (enrollment_id, tugas, uts, uas, final_score, letter_grade, status, ai_feedback)
+SELECT ce.id, 92.0, 88.0, 95.0, 92.0, 'A', 'Tersimpan',
+       'Penguasaan materi sangat baik pada seluruh indikator capaian pembelajaran mata kuliah Algoritma & Pemrograman Terapan.'
+FROM class_enrollments ce
+JOIN classes c ON ce.class_id = c.id
+JOIN students s ON ce.student_id = s.id
+WHERE c.code = 'IF2408' AND s.nim = '251234567899';
+
+INSERT OR IGNORE INTO grades (enrollment_id, tugas, uts, uas, final_score, letter_grade, status, ai_feedback)
+SELECT ce.id, 85.0, 80.0, 86.0, 83.9, 'B+', 'Tersimpan',
+       'Kemampuan analisis struktur data dan perancangan modular sangat memuaskan pada studi kasus rekayasa perangkat lunak.'
+FROM class_enrollments ce
+JOIN classes c ON ce.class_id = c.id
+JOIN students s ON ce.student_id = s.id
+WHERE c.code = 'IF301' AND s.nim = '251234567899';
+
+INSERT OR IGNORE INTO grades (enrollment_id, tugas, uts, uas, final_score, letter_grade, status, ai_feedback)
+SELECT ce.id, 88.0, 85.0, 90.0, 87.9, 'A', 'Tersimpan',
+       'Pemahaman kueri SQL relasional dan normalisasi skema luar biasa dalam perancangan basis data transaksi.'
+FROM class_enrollments ce
+JOIN classes c ON ce.class_id = c.id
+JOIN students s ON ce.student_id = s.id
+WHERE c.code = 'SI102' AND s.nim = '251234567899';
+
+-- Siti Rahma
 INSERT OR IGNORE INTO grades (enrollment_id, tugas, uts, uas, final_score, letter_grade, status, ai_feedback)
 SELECT ce.id, 88.0, 85.0, 90.0, 87.9, 'A', 'Tersimpan',
        'Penguasaan materi oleh Siti Rahma sangat istimewa pada seluruh komponen (Tugas 88, UTS 85, UAS 90). Memenuhi seluruh indikator capaian pembelajaran OBE dengan sangat memuaskan.'
@@ -93,6 +124,7 @@ JOIN classes c ON ce.class_id = c.id
 JOIN students s ON ce.student_id = s.id
 WHERE c.code = 'IF2408' AND s.nim = '22010101';
 
+-- Ahmad Fauzi
 INSERT OR IGNORE INTO grades (enrollment_id, tugas, uts, uas, final_score, letter_grade, status, ai_feedback)
 SELECT ce.id, 78.0, 75.0, 80.0, 77.9, 'B', 'Tersimpan',
        'Pemahaman konsep dan pengerjaan tugas oleh Ahmad Fauzi baik (Nilai Akhir 77.9). Disarankan untuk memperdalam studi kasus mandiri pada materi evaluasi akhir agar performa lebih optimal.'
@@ -101,6 +133,7 @@ JOIN classes c ON ce.class_id = c.id
 JOIN students s ON ce.student_id = s.id
 WHERE c.code = 'IF2408' AND s.nim = '22010102';
 
+-- Dewi Lestari
 INSERT OR IGNORE INTO grades (enrollment_id, tugas, uts, uas, final_score, letter_grade, status, ai_feedback)
 SELECT ce.id, 50.0, 55.0, 48.0, 50.7, 'E', 'Perlu remedial',
        'Mahasiswa direkomendasikan mengikuti sesi bimbingan remedial dan penguatan modul dasar untuk mengejar ketertinggalan capaian pembelajaran mata kuliah.'
@@ -109,6 +142,7 @@ JOIN classes c ON ce.class_id = c.id
 JOIN students s ON ce.student_id = s.id
 WHERE c.code = 'IF2408' AND s.nim = '22010103';
 
+-- Rian Pratama
 INSERT OR IGNORE INTO grades (enrollment_id, status)
 SELECT ce.id, 'Belum lengkap'
 FROM class_enrollments ce

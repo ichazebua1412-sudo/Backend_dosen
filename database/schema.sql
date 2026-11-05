@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS students (
     nim TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
+    password_hash TEXT DEFAULT '',
     prodi TEXT NOT NULL,
     status TEXT DEFAULT 'Aktif'
 );

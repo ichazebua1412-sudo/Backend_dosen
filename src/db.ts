@@ -75,6 +75,18 @@ export function runSeed(): void {
 export function initDatabase(): void {
   runSchema();
 
+  // Migration check: pastikan kolom password_hash ada di tabel students
+  try {
+    const tableInfo = db.prepare("PRAGMA table_info(students)").all() as any[];
+    const hasPassword = tableInfo.some((col: any) => col.name === "password_hash");
+    if (!hasPassword) {
+      db.exec("ALTER TABLE students ADD COLUMN password_hash TEXT DEFAULT '';");
+      console.log("Migrasi skema: kolom students.password_hash berhasil ditambahkan.");
+    }
+  } catch (err: any) {
+    console.error("Gagal memeriksa atau migrasi kolom students.password_hash:", err.message);
+  }
+
   try {
     const adminCount = (db.prepare("SELECT COUNT(id) as count FROM admins").get() as any)?.count || 0;
     if (adminCount === 0) {
