@@ -51,6 +51,30 @@ export function adminGuard(req: AuthRequest, res: Response, next: NextFunction):
   }
 }
 
+export function lecturerGuard(req: AuthRequest, res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Akses ditolak. Silakan login sebagai dosen." });
+    return;
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    // Dosen berhak mengakses, administrator memiliki hak akses supervisi
+    if (decoded.role && decoded.role !== "dosen" && decoded.role !== "admin" && decoded.role !== "superadmin") {
+      res.status(403).json({ error: "Akses terlarang. Hanya dosen yang berhak mengakses fitur ini." });
+      return;
+    }
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: "Sesi dosen telah berakhir atau token tidak valid." });
+  }
+}
+
+export const dosenGuard = lecturerGuard;
+
 export function studentGuard(req: AuthRequest, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {

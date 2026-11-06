@@ -1,14 +1,15 @@
 import { z } from "zod";
 
-export const adminLoginDto = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, "Username atau Email tidak boleh kosong."),
-  password: z
-    .string()
-    .min(1, "Kata sandi tidak boleh kosong."),
-});
+export const adminLoginDto = z
+  .object({
+    username: z.string().trim().optional(),
+    identifier: z.string().trim().optional(),
+    password: z.string().min(1, "Kata sandi tidak boleh kosong."),
+  })
+  .refine((data) => Boolean(data.username || data.identifier), {
+    message: "Username atau Email tidak boleh kosong.",
+    path: ["identifier"],
+  });
 
 export const createLecturerDto = z.object({
   nidn: z

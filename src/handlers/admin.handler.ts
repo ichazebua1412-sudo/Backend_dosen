@@ -25,22 +25,29 @@ export class AdminHandler {
   ) {}
 
   login = (req: Request, res: Response): void => {
-    const { username, password } = req.body as AdminLoginDto;
+    const body = req.body as AdminLoginDto;
+    const loginIdentifier = body.username || body.identifier;
 
-    const admin = this.adminRepo.findByUsernameOrEmail(username);
+    if (!loginIdentifier) {
+      res.status(400).json({ error: "Username atau Email administrator wajib diisi." });
+      return;
+    }
+
+    const admin = this.adminRepo.findByUsernameOrEmail(loginIdentifier);
     if (!admin) {
       res.status(401).json({ error: "Akun administrator tidak ditemukan." });
       return;
     }
 
-    const isPasswordValid = bcrypt.compareSync(password, admin.password_hash);
+    const isPasswordValid = bcrypt.compareSync(body.password, admin.password_hash);
     if (!isPasswordValid) {
       res.status(401).json({ error: "Kata sandi administrator salah." });
       return;
     }
 
+    const role = admin.role || "admin";
     const token = jwt.sign(
-      { id: admin.id, username: admin.username, email: admin.email, role: admin.role || "admin" },
+      { id: admin.id, username: admin.username, email: admin.email, role },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -48,12 +55,20 @@ export class AdminHandler {
     res.json({
       message: "Login administrator berhasil.",
       token,
+      role,
+      user: {
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        name: admin.name,
+        role,
+      },
       admin: {
         id: admin.id,
         username: admin.username,
         email: admin.email,
         name: admin.name,
-        role: admin.role,
+        role,
       },
     });
   };
