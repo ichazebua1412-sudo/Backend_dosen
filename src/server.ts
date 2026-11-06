@@ -14,6 +14,7 @@ import gradesRoutes from "./routes/grades.js";
 import lecturerRoutes from "./routes/lecturer.js";
 import aiRoutes from "./routes/ai.js";
 import adminRoutes from "./routes/admin.js";
+import studentRoutes from "./routes/student.js";
 
 dotenv.config();
 
@@ -69,6 +70,7 @@ app.use("/api/grades", gradesRoutes);
 app.use("/api/lecturer", lecturerRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/student", studentRoutes);
 
 // ==========================================
 // 7. GLOBAL ERROR HANDLER

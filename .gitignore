@@ -12,6 +12,8 @@ dist/
 # SQLite Database
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 
 # Logs
 *.log
