@@ -21,12 +21,18 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Sembunyikan informasi teknologi server dari penyerang
+app.disable("x-powered-by");
+
 // ==========================================
-// 1. KEAMANAN & HEADER (HELMET)
+// 1. KEAMANAN & HEADER (HELMET STRICT)
 // ==========================================
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    frameguard: { action: "deny" },
+    noSniff: true,
+    xssFilter: true,
   })
 );
 

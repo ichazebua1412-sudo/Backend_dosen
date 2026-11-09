@@ -27,8 +27,13 @@ const dbPath = resolveDbPath();
 export const db = new DatabaseSync(dbPath);
 
 // Enable WAL mode & foreign keys for high performance & ACID integrity
-db.exec("PRAGMA journal_mode = WAL;");
-db.exec("PRAGMA foreign_keys = ON;");
+try {
+  db.exec("PRAGMA busy_timeout = 5000;");
+  db.exec("PRAGMA journal_mode = WAL;");
+  db.exec("PRAGMA foreign_keys = ON;");
+} catch (e) {
+  console.warn("Notice setting SQLite PRAGMA:", e);
+}
 
 /**
  * Temukan path ke file SQL di folder database/

@@ -23,6 +23,10 @@ export function authGuard(req: AuthRequest, res: Response, next: NextFunction): 
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (decoded.role !== "dosen") {
+      res.status(403).json({ error: "Akses terlarang. Portal Dosen hanya dapat diakses oleh akun Dosen resmi." });
+      return;
+    }
     req.user = decoded;
     next();
   } catch (err) {
@@ -61,8 +65,7 @@ export function lecturerGuard(req: AuthRequest, res: Response, next: NextFunctio
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    // Dosen berhak mengakses, administrator memiliki hak akses supervisi
-    if (decoded.role && decoded.role !== "dosen" && decoded.role !== "admin" && decoded.role !== "superadmin") {
+    if (decoded.role !== "dosen") {
       res.status(403).json({ error: "Akses terlarang. Hanya dosen yang berhak mengakses fitur ini." });
       return;
     }
