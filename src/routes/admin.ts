@@ -23,6 +23,7 @@ router.get("/profile", adminGuard, adminHandler.getProfile);
 // 2. DASHBOARD STATS
 // ==========================================
 router.get("/dashboard", adminGuard, adminHandler.getDashboard);
+router.get("/stats", adminGuard, adminHandler.getDashboard);
 
 // ==========================================
 // 3. LECTURER MANAGEMENT
@@ -41,8 +42,14 @@ router.put("/students/:id", adminGuard, validateBody(updateStudentDto), adminHan
 router.delete("/students/:id", adminGuard, adminHandler.deleteStudent);
 
 // ==========================================
-// 5. CLASS MONITORING
+// 5. CLASS MANAGEMENT & MONITORING
 // ==========================================
 router.get("/classes", adminGuard, adminHandler.getClasses);
+router.post("/classes", adminGuard, adminHandler.createClass);
+router.put("/classes/:id", adminGuard, adminHandler.updateClass);
+router.delete("/classes/:id", adminGuard, adminHandler.deleteClass);
+router.get("/classes/:id/students", adminGuard, adminHandler.getClassStudents);
+router.post("/classes/:id/students", adminGuard, adminHandler.enrollStudentToClass);
+router.delete("/classes/:classId/students/:studentId", adminGuard, adminHandler.unenrollStudentFromClass);
 
 export default router;

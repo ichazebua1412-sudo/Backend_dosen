@@ -75,13 +75,14 @@ export class ClassRepository {
     sks: number;
     prodi: string;
     semester: number;
+    academicYear?: string;
     capacity: number;
     schedule: string;
     room: string;
   }): number {
     const stmt = db.prepare(`
-      INSERT INTO classes (lecturer_id, code, title, sks, prodi, semester, capacity, schedule, room)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO classes (lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       data.lecturerId,
@@ -90,6 +91,7 @@ export class ClassRepository {
       data.sks,
       data.prodi.trim(),
       data.semester,
+      data.academicYear ? data.academicYear.trim() : "2024/2025 Ganjil",
       data.capacity,
       data.schedule.trim(),
       data.room.trim()
@@ -133,8 +135,53 @@ export class ClassRepository {
     );
   }
 
+  adminUpdate(classId: number, data: {
+    lecturerId?: number;
+    code?: string;
+    title?: string;
+    sks?: number;
+    prodi?: string;
+    semester?: number;
+    academicYear?: string;
+    capacity?: number;
+    schedule?: string;
+    room?: string;
+  }): void {
+    const stmt = db.prepare(`
+      UPDATE classes
+      SET lecturer_id = COALESCE(?, lecturer_id),
+          code = COALESCE(?, code),
+          title = COALESCE(?, title),
+          sks = COALESCE(?, sks),
+          prodi = COALESCE(?, prodi),
+          semester = COALESCE(?, semester),
+          academic_year = COALESCE(?, academic_year),
+          capacity = COALESCE(?, capacity),
+          schedule = COALESCE(?, schedule),
+          room = COALESCE(?, room)
+      WHERE id = ?
+    `);
+    stmt.run(
+      data.lecturerId !== undefined ? data.lecturerId : null,
+      data.code?.trim() || null,
+      data.title?.trim() || null,
+      data.sks !== undefined ? data.sks : null,
+      data.prodi?.trim() || null,
+      data.semester !== undefined ? data.semester : null,
+      data.academicYear?.trim() || null,
+      data.capacity !== undefined ? data.capacity : null,
+      data.schedule?.trim() || null,
+      data.room?.trim() || null,
+      classId
+    );
+  }
+
   delete(classId: number, lecturerId: number): void {
     db.prepare("DELETE FROM classes WHERE id = ? AND lecturer_id = ?").run(classId, lecturerId);
+  }
+
+  adminDelete(classId: number): void {
+    db.prepare("DELETE FROM classes WHERE id = ?").run(classId);
   }
 }
 

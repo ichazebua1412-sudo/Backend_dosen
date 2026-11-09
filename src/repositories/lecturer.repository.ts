@@ -28,14 +28,20 @@ export class LecturerRepository {
     return row || null;
   }
 
-  findById(id: number): LecturerRecord | null {
+  findById(id: number): (LecturerRecord & { fullName: string }) | null {
     const stmt = db.prepare(`
       SELECT id, nidn, email, password_hash, name, title_prefix, title_suffix, phone, office_room, consult_hours, status, notif_achievement, notif_deadline, created_at
       FROM lecturers
       WHERE id = ?
     `);
     const row = stmt.get(id) as LecturerRecord | undefined;
-    return row || null;
+    if (!row) return null;
+    const prefix = row.title_prefix ? `${row.title_prefix.trim()} ` : "";
+    const suffix = row.title_suffix ? `, ${row.title_suffix.trim()}` : "";
+    return {
+      ...row,
+      fullName: `${prefix}${row.name || ""}${suffix}`.trim() || row.name || "",
+    };
   }
 
   findAll(): any[] {
@@ -48,7 +54,16 @@ export class LecturerRepository {
       GROUP BY l.id
       ORDER BY l.name ASC
     `);
-    return stmt.all();
+    const rows = stmt.all() as any[];
+    return rows.map((r) => {
+      const prefix = r.title_prefix ? `${r.title_prefix.trim()} ` : "";
+      const suffix = r.title_suffix ? `, ${r.title_suffix.trim()}` : "";
+      return {
+        ...r,
+        fullName: `${prefix}${r.name || ""}${suffix}`.trim() || r.name || "",
+        total_classes: r.class_count || 0,
+      };
+    });
   }
 
   checkDuplicate(nidn: string, email: string, excludeId?: number): LecturerRecord | null {

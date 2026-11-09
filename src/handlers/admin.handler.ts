@@ -5,6 +5,7 @@ import { AdminRepository, adminRepository } from "../repositories/admin.reposito
 import { LecturerRepository, lecturerRepository } from "../repositories/lecturer.repository.js";
 import { StudentRepository, studentRepository } from "../repositories/student.repository.js";
 import { ClassRepository, classRepository } from "../repositories/class.repository.js";
+import { GradeRepository, gradeRepository } from "../repositories/grade.repository.js";
 import { AuthRequest } from "../middleware/auth.js";
 import {
   AdminLoginDto,
@@ -21,7 +22,8 @@ export class AdminHandler {
     private adminRepo: AdminRepository = adminRepository,
     private lecturerRepo: LecturerRepository = lecturerRepository,
     private studentRepo: StudentRepository = studentRepository,
-    private classRepo: ClassRepository = classRepository
+    private classRepo: ClassRepository = classRepository,
+    private gradeRepo: GradeRepository = gradeRepository
   ) {}
 
   login = (req: Request, res: Response): void => {
@@ -223,6 +225,142 @@ export class AdminHandler {
     const { search } = req.query;
     const classes = this.classRepo.findAllWithLecturer(search ? String(search) : undefined);
     res.json({ classes });
+  };
+
+  createClass = (req: AuthRequest, res: Response): void => {
+    const { lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room } = req.body;
+    if (!lecturer_id || !code || !title) {
+      res.status(400).json({ error: "Kode kelas, nama mata kuliah, dan dosen pengampu wajib diisi." });
+      return;
+    }
+
+    const lecturer = this.lecturerRepo.findById(Number(lecturer_id));
+    if (!lecturer) {
+      res.status(404).json({ error: "Dosen pengampu tidak ditemukan." });
+      return;
+    }
+
+    const classId = this.classRepo.create({
+      lecturerId: Number(lecturer_id),
+      code: String(code),
+      title: String(title),
+      sks: sks ? Number(sks) : 3,
+      prodi: prodi ? String(prodi) : "S1 Informatika",
+      semester: semester ? Number(semester) : 1,
+      academicYear: academic_year ? String(academic_year) : "2024/2025 Ganjil",
+      capacity: capacity ? Number(capacity) : 40,
+      schedule: schedule ? String(schedule) : "",
+      room: room ? String(room) : "",
+    });
+
+    res.status(201).json({
+      message: "Kelas berhasil dibuat.",
+      classId,
+    });
+  };
+
+  updateClass = (req: AuthRequest, res: Response): void => {
+    const classId = Number(req.params.id);
+    const existing = this.classRepo.findById(classId);
+    if (!existing) {
+      res.status(404).json({ error: "Kelas tidak ditemukan." });
+      return;
+    }
+
+    const { lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room } = req.body;
+
+    this.classRepo.adminUpdate(classId, {
+      lecturerId: lecturer_id ? Number(lecturer_id) : undefined,
+      code: code ? String(code) : undefined,
+      title: title ? String(title) : undefined,
+      sks: sks !== undefined ? Number(sks) : undefined,
+      prodi: prodi ? String(prodi) : undefined,
+      semester: semester !== undefined ? Number(semester) : undefined,
+      academicYear: academic_year ? String(academic_year) : undefined,
+      capacity: capacity !== undefined ? Number(capacity) : undefined,
+      schedule: schedule !== undefined ? String(schedule) : undefined,
+      room: room !== undefined ? String(room) : undefined,
+    });
+
+    res.json({ message: "Data kelas berhasil diperbarui." });
+  };
+
+  deleteClass = (req: AuthRequest, res: Response): void => {
+    const classId = Number(req.params.id);
+    const existing = this.classRepo.findById(classId);
+    if (!existing) {
+      res.status(404).json({ error: "Kelas tidak ditemukan." });
+      return;
+    }
+
+    this.classRepo.adminDelete(classId);
+    res.json({ message: "Kelas berhasil dihapus." });
+  };
+
+  getClassStudents = (req: AuthRequest, res: Response): void => {
+    const classId = Number(req.params.id);
+    const existing = this.classRepo.findById(classId);
+    if (!existing) {
+      res.status(404).json({ error: "Kelas tidak ditemukan." });
+      return;
+    }
+
+    const students = this.studentRepo.findEnrolledByClassId(classId);
+    res.json({ class: existing, students });
+  };
+
+  enrollStudentToClass = (req: AuthRequest, res: Response): void => {
+    const classId = Number(req.params.id);
+    const existing = this.classRepo.findById(classId);
+    if (!existing) {
+      res.status(404).json({ error: "Kelas tidak ditemukan." });
+      return;
+    }
+
+    const { studentId, nim, name, email, prodi } = req.body;
+    let targetStudentId: number;
+
+    if (studentId) {
+      const stu = this.studentRepo.findById(Number(studentId));
+      if (!stu) {
+        res.status(404).json({ error: "Mahasiswa tidak ditemukan." });
+        return;
+      }
+      targetStudentId = stu.id;
+    } else if (nim && name) {
+      targetStudentId = this.studentRepo.upsert({
+        nim: String(nim),
+        name: String(name),
+        email: email ? String(email) : `${nim}@student.kampus.ac.id`,
+        prodi: prodi ? String(prodi) : existing.prodi,
+        status: "Aktif",
+      });
+    } else {
+      res.status(400).json({ error: "Pilih mahasiswa terdaftar atau masukkan NIM dan Nama." });
+      return;
+    }
+
+    const existingEnrollment = this.studentRepo.findEnrollment(classId, targetStudentId);
+    if (existingEnrollment) {
+      res.status(400).json({ error: "Mahasiswa sudah terdaftar pada kelas ini." });
+      return;
+    }
+
+    const enrollmentId = this.studentRepo.enrollStudent(classId, targetStudentId);
+    this.gradeRepo.initEmptyGrade(enrollmentId);
+
+    res.status(201).json({
+      message: "Mahasiswa berhasil didaftarkan ke kelas.",
+      enrollmentId,
+    });
+  };
+
+  unenrollStudentFromClass = (req: AuthRequest, res: Response): void => {
+    const classId = Number(req.params.classId);
+    const studentId = Number(req.params.studentId);
+
+    this.studentRepo.unenrollStudent(classId, studentId);
+    res.json({ message: "Mahasiswa berhasil dikeluarkan dari kelas." });
   };
 }
 
