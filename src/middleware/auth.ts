@@ -29,8 +29,12 @@ export function authGuard(req: AuthRequest, res: Response, next: NextFunction): 
     }
     req.user = decoded;
     next();
-  } catch (err) {
-    res.status(401).json({ error: "Sesi telah berakhir atau token tidak valid." });
+  } catch (err: any) {
+    if (err.name === "TokenExpiredError") {
+      res.status(401).json({ error: "Sesi telah berakhir atau token sudah kedaluwarsa. Silakan login kembali." });
+      return;
+    }
+    res.status(401).json({ error: "Sesi telah berakhir atau token tidak valid. Silakan login kembali." });
   }
 }
 
@@ -71,8 +75,12 @@ export function lecturerGuard(req: AuthRequest, res: Response, next: NextFunctio
     }
     req.user = decoded;
     next();
-  } catch (err) {
-    res.status(401).json({ error: "Sesi dosen telah berakhir atau token tidak valid." });
+  } catch (err: any) {
+    if (err.name === "TokenExpiredError") {
+      res.status(401).json({ error: "Sesi dosen telah berakhir atau token sudah kedaluwarsa. Silakan login kembali." });
+      return;
+    }
+    res.status(401).json({ error: "Sesi dosen telah berakhir atau token tidak valid. Silakan login kembali." });
   }
 }
 

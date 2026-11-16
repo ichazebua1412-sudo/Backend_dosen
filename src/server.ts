@@ -19,7 +19,7 @@ import studentRoutes from "./routes/student.js";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Sembunyikan informasi teknologi server dari penyerang
 app.disable("x-powered-by");

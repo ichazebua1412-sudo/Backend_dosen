@@ -149,6 +149,38 @@ export class GradeHandler {
       errors: errors.length > 0 ? errors : undefined,
     });
   };
+
+  getAppeals = (req: AuthRequest, res: Response): void => {
+    const classId = Number(req.params.classId);
+    if (!classId) {
+      res.status(400).json({ error: "Parameter classId tidak valid." });
+      return;
+    }
+
+    const appeals = this.gradeRepo.getAppealsByClassId(classId);
+    res.json({ appeals });
+  };
+
+  updateAppeal = (req: AuthRequest, res: Response): void => {
+    const appealId = Number(req.params.appealId);
+    const { status, lecturer_response } = req.body;
+
+    if (!appealId) {
+      res.status(400).json({ error: "Parameter appealId tidak valid." });
+      return;
+    }
+
+    if (!status || !["pending", "approved", "rejected"].includes(status)) {
+      res.status(400).json({ error: "Status harus bernilai pending, approved, atau rejected." });
+      return;
+    }
+
+    const updated = this.gradeRepo.updateAppealStatus(appealId, status, lecturer_response);
+    res.json({
+      message: "Status pengajuan koreksi nilai berhasil diperbarui.",
+      appeal: updated,
+    });
+  };
 }
 
 export const gradeHandler = new GradeHandler();

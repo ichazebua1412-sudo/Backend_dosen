@@ -6,6 +6,11 @@ import { batchUpdateGradesDto, importGradesDto } from "../dto/grade.dto.js";
 
 const router = Router();
 
+// Sanggahan / Koreksi Nilai Mahasiswa (Grade Appeals)
+router.get("/:classId/appeals", authGuard, gradeHandler.getAppeals);
+router.patch("/appeals/:appealId", authGuard, gradeHandler.updateAppeal);
+router.put("/appeals/:appealId", authGuard, gradeHandler.updateAppeal);
+
 // Get grades for class
 router.get("/:classId", authGuard, gradeHandler.getGrades);
 

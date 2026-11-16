@@ -24,6 +24,11 @@ switch (action) {
       const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "gradia.db");
       // Drop all tables
       const tables = [
+        "grade_reviews",
+        "notifications",
+        "assignment_submissions",
+        "assignments",
+        "attendances",
         "grades",
         "class_enrollments",
         "classes",

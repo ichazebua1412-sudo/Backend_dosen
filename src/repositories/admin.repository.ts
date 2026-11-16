@@ -60,6 +60,14 @@ export class AdminRepository {
       LIMIT 5
     `).all();
 
+    const prodiDistribution = db.prepare(`
+      SELECT prodi, COUNT(id) as count
+      FROM students
+      WHERE prodi IS NOT NULL AND TRIM(prodi) != ''
+      GROUP BY prodi
+      ORDER BY count DESC
+    `).all();
+
     return {
       stats: {
         totalLecturers,
@@ -68,6 +76,7 @@ export class AdminRepository {
         totalStudents,
         totalGrades,
       },
+      prodiDistribution,
       recentLecturers,
       recentClasses,
     };

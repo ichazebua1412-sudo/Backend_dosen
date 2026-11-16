@@ -37,6 +37,15 @@ export class AdminHandler {
 
     const admin = this.adminRepo.findByUsernameOrEmail(loginIdentifier);
     if (!admin) {
+      // Cek apakah akun ini terdaftar sebagai Dosen
+      const lecturer = this.lecturerRepo.findByNidnOrEmail(loginIdentifier);
+      if (lecturer) {
+        res.status(403).json({
+          error: "Akses ditolak. Akun Anda terdaftar sebagai Dosen. Hanya akun Administrator yang berhak login ke Dashboard Admin.",
+        });
+        return;
+      }
+
       res.status(401).json({ error: "Akun administrator tidak ditemukan." });
       return;
     }
@@ -245,7 +254,7 @@ export class AdminHandler {
       code: String(code),
       title: String(title),
       sks: sks ? Number(sks) : 3,
-      prodi: prodi ? String(prodi) : "S1 Informatika",
+      prodi: prodi ? String(prodi) : "Teknik Informatika",
       semester: semester ? Number(semester) : 1,
       academicYear: academic_year ? String(academic_year) : "2024/2025 Ganjil",
       capacity: capacity ? Number(capacity) : 40,
