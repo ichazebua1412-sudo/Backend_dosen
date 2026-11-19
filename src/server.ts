@@ -15,6 +15,7 @@ import lecturerRoutes from "./routes/lecturer.js";
 import aiRoutes from "./routes/ai.js";
 import adminRoutes from "./routes/admin.js";
 import studentRoutes from "./routes/student.js";
+import uploadRoutes from "./routes/upload.js";
 
 dotenv.config();
 
@@ -107,6 +108,7 @@ app.use("/api/lecturer", lecturerRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/student", studentRoutes);
+app.use("/api/upload", uploadRoutes); // Upload file → Vercel Blob (wajib via backend)
 
 // ==========================================
 // 7. GLOBAL ERROR HANDLER
