@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS classes (
     capacity INTEGER DEFAULT 40,
     schedule TEXT DEFAULT '',
     room TEXT DEFAULT '',
+    weight_tugas REAL DEFAULT 0.25,
+    weight_uts REAL DEFAULT 0.35,
+    weight_uas REAL DEFAULT 0.40,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

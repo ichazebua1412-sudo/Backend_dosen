@@ -14,9 +14,16 @@ export const gradeItemDto = z.object({
   message: "Enrollment ID wajib disediakan untuk setiap komponen nilai.",
 });
 
+export const gradeWeightsDto = z.object({
+  tugas: z.coerce.number().min(0).max(100),
+  uts: z.coerce.number().min(0).max(100),
+  uas: z.coerce.number().min(0).max(100),
+}).optional();
+
 export const batchUpdateGradesDto = z.object({
   items: z.array(gradeItemDto).optional(),
   grades: z.array(gradeItemDto).optional(),
+  weights: gradeWeightsDto,
 }).refine(data => (data.items && data.items.length > 0) || (data.grades && data.grades.length > 0), {
   message: "Data nilai (items atau grades) tidak boleh kosong.",
 });

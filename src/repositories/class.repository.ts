@@ -12,6 +12,9 @@ export interface ClassRecord {
   capacity: number;
   schedule: string;
   room: string;
+  weight_tugas?: number;
+  weight_uts?: number;
+  weight_uas?: number;
   created_at: string;
 }
 
@@ -19,6 +22,7 @@ export class ClassRepository {
   findAllByLecturerId(lecturerId: number): any[] {
     const stmt = db.prepare(`
       SELECT c.id, c.code, c.title, c.sks, c.prodi, c.semester, c.academic_year, c.capacity, c.schedule, c.room,
+             c.weight_tugas, c.weight_uts, c.weight_uas,
              COUNT(ce.id) as enrolled_count
       FROM classes c
       LEFT JOIN class_enrollments ce ON c.id = ce.class_id
@@ -31,7 +35,8 @@ export class ClassRepository {
 
   findByIdAndLecturerId(classId: number, lecturerId: number): ClassRecord | null {
     const stmt = db.prepare(`
-      SELECT id, lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room, created_at
+      SELECT id, lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room,
+             weight_tugas, weight_uts, weight_uas, created_at
       FROM classes
       WHERE id = ? AND lecturer_id = ?
     `);
@@ -41,7 +46,8 @@ export class ClassRepository {
 
   findById(classId: number): ClassRecord | null {
     const stmt = db.prepare(`
-      SELECT id, lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room, created_at
+      SELECT id, lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room,
+             weight_tugas, weight_uts, weight_uas, created_at
       FROM classes
       WHERE id = ?
     `);
@@ -174,6 +180,17 @@ export class ClassRepository {
       data.room?.trim() || null,
       classId
     );
+  }
+
+  updateWeights(classId: number, weights: { tugas: number; uts: number; uas: number }): void {
+    const stmt = db.prepare(`
+      UPDATE classes
+      SET weight_tugas = ?,
+          weight_uts = ?,
+          weight_uas = ?
+      WHERE id = ?
+    `);
+    stmt.run(weights.tugas, weights.uts, weights.uas, classId);
   }
 
   delete(classId: number, lecturerId: number): void {

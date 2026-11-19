@@ -92,6 +92,23 @@ export function initDatabase(): void {
     console.error("Gagal memeriksa atau migrasi kolom students.password_hash:", err.message);
   }
 
+  // Migration check: pastikan kolom weight_tugas, weight_uts, weight_uas ada di tabel classes
+  try {
+    const classInfo = db.prepare("PRAGMA table_info(classes)").all() as any[];
+    const classCols = classInfo.map((col: any) => col.name);
+    if (!classCols.includes("weight_tugas")) {
+      db.exec("ALTER TABLE classes ADD COLUMN weight_tugas REAL DEFAULT 0.25;");
+    }
+    if (!classCols.includes("weight_uts")) {
+      db.exec("ALTER TABLE classes ADD COLUMN weight_uts REAL DEFAULT 0.35;");
+    }
+    if (!classCols.includes("weight_uas")) {
+      db.exec("ALTER TABLE classes ADD COLUMN weight_uas REAL DEFAULT 0.40;");
+    }
+  } catch (err: any) {
+    console.error("Gagal memeriksa atau migrasi kolom bobot classes:", err.message);
+  }
+
   try {
     const adminCount = (db.prepare("SELECT COUNT(id) as count FROM admins").get() as any)?.count || 0;
     if (adminCount === 0) {
