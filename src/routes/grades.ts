@@ -20,4 +20,10 @@ router.put("/:classId", authGuard, validateBody(batchUpdateGradesDto), gradeHand
 // Bulk import grades (from preview / Excel payload)
 router.post("/:classId/import", authGuard, validateBody(importGradesDto), gradeHandler.importGrades);
 
+// Get appeals for a class
+router.get("/:classId/appeals", authGuard, gradeHandler.getAppeals);
+
+// Update appeal status
+router.patch("/appeals/:appealId", authGuard, gradeHandler.updateAppeal);
+
 export default router;

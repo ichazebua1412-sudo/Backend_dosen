@@ -78,6 +78,10 @@ router.get("/grade-reviews", studentGuard, studentHandler.getGradeReviews);
 // POST /grade-reviews - Kirim pengajuan koreksi nilai ke dosen pengampu
 router.post("/grade-reviews", studentGuard, validateBody(createGradeReviewDto), studentHandler.createGradeReview);
 
+// Alias routes untuk kompatibilitas
+router.post("/grade-appeal", studentHandler.createGradeAppeal);
+router.get("/grade-appeals", studentHandler.getGradeAppeals);
+
 export default router;
 
 

@@ -234,6 +234,33 @@ export class StudentHandler {
     const result = this.studentRepo.createGradeReview(studentId, body);
     res.status(201).json(result);
   };
+
+  createGradeAppeal = (req: AuthRequest, res: Response): void => {
+    const studentId = req.user?.id || req.body.student_id || 1;
+    const body = req.body;
+    const classId = body.classId || body.class_id || 1;
+    const component = body.component || body.question_title || "Umum";
+    const currentScore = body.currentScore || body.current_score || "-";
+    const reason = body.reason || body.comment || "";
+
+    const result = this.studentRepo.createGradeReview(Number(studentId), {
+      classId: Number(classId),
+      component: String(component),
+      currentScore: String(currentScore),
+      reason: String(reason),
+    });
+
+    res.status(201).json({
+      appeal: result,
+      ...result,
+    });
+  };
+
+  getGradeAppeals = (req: AuthRequest, res: Response): void => {
+    const studentId = req.user?.id || req.query.student_id || 1;
+    const reviews = this.studentRepo.getStudentGradeReviews(Number(studentId));
+    res.json({ appeals: reviews, reviews });
+  };
 }
 
 export const studentHandler = new StudentHandler();
