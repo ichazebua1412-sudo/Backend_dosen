@@ -222,8 +222,12 @@ export class AdminHandler {
   };
 
   getClasses = (req: AuthRequest, res: Response): void => {
-    const { search } = req.query;
-    const classes = this.classRepo.findAllWithLecturer(search ? String(search) : undefined);
+    const { search, lecturer_id } = req.query;
+    const lecturerIdNum = lecturer_id ? Number(lecturer_id) : undefined;
+    const classes = this.classRepo.findAllWithLecturer(
+      search ? String(search) : undefined,
+      lecturerIdNum
+    );
     res.json({ classes });
   };
 

@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "db:init": "tsx src/scripts/db.ts init",
     "db:seed": "tsx src/scripts/db.ts seed",
+    "db:seed:students": "tsx src/scripts/seed-30-students.ts",
     "db:reset": "tsx src/scripts/db.ts reset"
   },
   "keywords": [],
