@@ -173,6 +173,26 @@ export class AdminHandler {
     res.json({ message: "Data dosen berhasil diperbarui." });
   };
 
+  resetLecturerPassword = (req: AuthRequest, res: Response): void => {
+    const lecturerId = Number(req.params.id);
+    const current = this.lecturerRepo.findById(lecturerId);
+    if (!current) {
+      res.status(404).json({ error: "Dosen tidak ditemukan." });
+      return;
+    }
+
+    const { password } = req.body;
+    if (!password || typeof password !== "string" || password.trim().length < 6) {
+      res.status(400).json({ error: "Kata sandi baru minimal 6 karakter." });
+      return;
+    }
+
+    const newHash = bcrypt.hashSync(password.trim(), 10);
+    this.lecturerRepo.updatePassword(lecturerId, newHash);
+
+    res.json({ message: "Kata sandi dosen berhasil direset." });
+  };
+
   deleteLecturer = (req: AuthRequest, res: Response): void => {
     const lecturerId = Number(req.params.id);
     const current = this.lecturerRepo.findById(lecturerId);
@@ -218,6 +238,26 @@ export class AdminHandler {
     res.json({ message: "Data mahasiswa berhasil diperbarui." });
   };
 
+  resetStudentPassword = (req: AuthRequest, res: Response): void => {
+    const studentId = Number(req.params.id);
+    const current = this.studentRepo.findById(studentId);
+    if (!current) {
+      res.status(404).json({ error: "Mahasiswa tidak ditemukan." });
+      return;
+    }
+
+    const { password } = req.body;
+    if (!password || typeof password !== "string" || password.trim().length < 6) {
+      res.status(400).json({ error: "Kata sandi baru minimal 6 karakter." });
+      return;
+    }
+
+    const newHash = bcrypt.hashSync(password.trim(), 10);
+    this.studentRepo.update(studentId, { passwordHash: newHash });
+
+    res.json({ message: "Kata sandi mahasiswa berhasil direset." });
+  };
+
   deleteStudent = (req: AuthRequest, res: Response): void => {
     const studentId = Number(req.params.id);
     const current = this.studentRepo.findById(studentId);
@@ -231,8 +271,12 @@ export class AdminHandler {
   };
 
   getClasses = (req: AuthRequest, res: Response): void => {
-    const { search } = req.query;
-    const classes = this.classRepo.findAllWithLecturer(search ? String(search) : undefined);
+    const { search, lecturer_id } = req.query;
+    const lecturerIdNum = lecturer_id ? Number(lecturer_id) : undefined;
+    const classes = this.classRepo.findAllWithLecturer(
+      search ? String(search) : undefined,
+      isNaN(lecturerIdNum!) ? undefined : lecturerIdNum
+    );
     res.json({ classes });
   };
 

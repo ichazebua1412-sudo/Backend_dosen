@@ -55,23 +55,46 @@ export class ClassRepository {
     return row || null;
   }
 
-  findAllWithLecturer(search?: string): any[] {
+  findAllWithLecturer(search?: string, lecturerId?: number): any[] {
     let query = `
       SELECT c.id, c.code, c.title, c.sks, c.prodi, c.semester, c.academic_year, c.capacity, c.schedule, c.room,
+             c.lecturer_id,
              l.name as lecturer_name, l.nidn as lecturer_nidn,
+             l.title_prefix as lecturer_title_prefix, l.title_suffix as lecturer_title_suffix,
              COUNT(ce.id) as enrolled_count
       FROM classes c
       JOIN lecturers l ON c.lecturer_id = l.id
       LEFT JOIN class_enrollments ce ON c.id = ce.class_id
     `;
     const params: any[] = [];
-    if (search && search.trim()) {
-      query += ` WHERE c.title LIKE ? OR c.code LIKE ? OR l.name LIKE ? `;
-      const term = `%${search.trim()}%`;
-      params.push(term, term, term);
+    const whereClauses: string[] = [];
+
+    if (lecturerId !== undefined) {
+      whereClauses.push(`c.lecturer_id = ?`);
+      params.push(lecturerId);
     }
+
+    if (search && search.trim()) {
+      whereClauses.push(`(c.title LIKE ? OR c.code LIKE ? OR l.name LIKE ? OR l.nidn LIKE ?)`);
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term);
+    }
+
+    if (whereClauses.length > 0) {
+      query += ` WHERE ${whereClauses.join(" AND ")} `;
+    }
+
     query += ` GROUP BY c.id ORDER BY c.id DESC `;
-    return db.prepare(query).all(...params);
+    const rows = db.prepare(query).all(...params) as any[];
+    return rows.map((r) => {
+      const prefix = r.lecturer_title_prefix ? `${r.lecturer_title_prefix.trim()} ` : "";
+      const suffix = r.lecturer_title_suffix ? `, ${r.lecturer_title_suffix.trim()}` : "";
+      const lecturerFullName = `${prefix}${r.lecturer_name || ""}${suffix}`.trim() || r.lecturer_name || "";
+      return {
+        ...r,
+        lecturerFullName,
+      };
+    });
   }
 
   create(data: {
