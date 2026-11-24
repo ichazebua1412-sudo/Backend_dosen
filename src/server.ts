@@ -15,11 +15,12 @@ import lecturerRoutes from "./routes/lecturer.js";
 import aiRoutes from "./routes/ai.js";
 import adminRoutes from "./routes/admin.js";
 import studentRoutes from "./routes/student.js";
+import uploadRoutes from "./routes/upload.js";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Sembunyikan informasi teknologi server dari penyerang
 app.disable("x-powered-by");
@@ -65,6 +66,36 @@ initDatabase();
 // ==========================================
 // 6. ROUTE HANDLERS (LAPISAN ROUTER)
 // ==========================================
+app.get("/", (_req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Gradia Backend Server</title>
+        <meta charset="utf-8" />
+      </head>
+      <body style="font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f1f5f9;">
+        <div style="background: white; padding: 2.5rem; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); text-align: center; max-width: 480px; width: 90%;">
+          <div style="font-size: 3rem; margin-bottom: 0.5rem;">🚀</div>
+          <h1 style="color: #312e81; margin: 0 0 0.5rem 0; font-size: 1.5rem;">Gradia Backend Server</h1>
+          <div style="display: inline-block; background-color: #dcfce7; color: #15803d; padding: 0.35rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem; margin-bottom: 1rem;">
+            ● Server Aktif & Berjalan di Port 5001
+          </div>
+          <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-top: 0;">
+            Server REST API siap melayani request dari aplikasi mobile Gradia-PBL maupun web frontend dosen.
+          </p>
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem 1rem; font-family: monospace; font-size: 0.85rem; color: #475569; margin: 1rem 0;">
+            GET /api/health → Status OK
+          </div>
+          <a href="/api/health" style="display: inline-block; background-color: #4f46e5; color: white; text-decoration: none; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 500; font-size: 0.9rem;">
+            Cek Health Status
+          </a>
+        </div>
+      </body>
+    </html>
+  `);
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
@@ -81,6 +112,7 @@ app.use("/api/lecturer", lecturerRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/student", studentRoutes);
+app.use("/api/upload", uploadRoutes); // Upload file → Vercel Blob (wajib via backend)
 
 // ==========================================
 // 7. GLOBAL ERROR HANDLER
@@ -92,7 +124,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   });
 });
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), "0.0.0.0", () => {
   console.log(`🚀 Gradia Backend berjalan di http://localhost:${PORT}`);
 });
 

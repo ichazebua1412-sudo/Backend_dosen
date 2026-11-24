@@ -25,11 +25,140 @@ export class AuthHandler {
 
   /**
    * Pengecekan User Terpadu Lewat Backend:
-   * Otomatis memvalidasi apakah kredensial merupakan Administrator atau Dosen.
+   * Otomatis memvalidasi kredensial Administrator atau Dosen dengan pengecekan role yang ketat.
    */
   login = (req: Request, res: Response): void => {
-    const { identifier, password } = req.body as LoginDto;
+    const { identifier, password, role: requestedRole } = req.body as LoginDto;
 
+    // =========================================================================
+    // 1. JIKA REQUEST DITUJUKAN KE PORTAL LOGIN ADMIN (role === 'admin')
+    // Hanya akun admin yang boleh login; jika akun dosen mencoba login, timbul error!
+    // =========================================================================
+    if (requestedRole === "admin") {
+      const admin = this.adminRepo.findByUsernameOrEmail(identifier);
+      if (admin) {
+        const isPasswordValid = bcrypt.compareSync(password, admin.password_hash);
+        if (isPasswordValid) {
+          const role = admin.role || "admin";
+          const token = jwt.sign(
+            { id: admin.id, username: admin.username, email: admin.email, role },
+            JWT_SECRET,
+            { expiresIn: "7d" }
+          );
+
+          res.json({
+            message: "Login administrator berhasil.",
+            token,
+            role,
+            user: {
+              id: admin.id,
+              username: admin.username,
+              email: admin.email,
+              name: admin.name,
+              role,
+            },
+            admin: {
+              id: admin.id,
+              username: admin.username,
+              email: admin.email,
+              name: admin.name,
+              role,
+            },
+          });
+          return;
+        }
+
+        res.status(401).json({ error: "Kata sandi yang Anda masukkan salah." });
+        return;
+      }
+
+      // Cek apakah akun terdaftar sebagai Dosen
+      const lecturer = this.lecturerRepo.findByNidnOrEmail(identifier);
+      if (lecturer) {
+        // Terjadi error: akun dosen dilarang login ke dashboard admin
+        res.status(403).json({
+          error: "Akses ditolak. Akun Anda terdaftar sebagai Dosen. Hanya akun Administrator yang berhak login ke Dashboard Admin.",
+        });
+        return;
+      }
+
+      res.status(401).json({
+        error: "Akun Administrator tidak ditemukan. Periksa Username atau Email Anda.",
+      });
+      return;
+    }
+
+    // =========================================================================
+    // 2. JIKA REQUEST DITUJUKAN KE PORTAL LOGIN DOSEN (role === 'dosen')
+    // Hanya akun dosen yang boleh login; jika admin mencoba login, timbul error
+    // =========================================================================
+    if (requestedRole === "dosen") {
+      const lecturer = this.lecturerRepo.findByNidnOrEmail(identifier);
+      if (lecturer) {
+        if (lecturer.status === "inactive") {
+          res.status(403).json({
+            error: "Akun dosen Anda sedang dinonaktifkan oleh Administrator. Hubungi Bagian Akademik.",
+          });
+          return;
+        }
+
+        const isPasswordValid = bcrypt.compareSync(password, lecturer.password_hash);
+        if (isPasswordValid) {
+          const token = jwt.sign(
+            { id: lecturer.id, nidn: lecturer.nidn, email: lecturer.email, role: "dosen" },
+            JWT_SECRET,
+            { expiresIn: "7d" }
+          );
+
+          res.json({
+            message: "Login dosen berhasil.",
+            token,
+            role: "dosen",
+            user: {
+              id: lecturer.id,
+              nidn: lecturer.nidn,
+              email: lecturer.email,
+              name: lecturer.name,
+              role: "dosen",
+            },
+            lecturer: {
+              id: lecturer.id,
+              nidn: lecturer.nidn,
+              email: lecturer.email,
+              name: lecturer.name,
+              titlePrefix: lecturer.title_prefix,
+              titleSuffix: lecturer.title_suffix,
+              fullName: `${lecturer.title_prefix ? lecturer.title_prefix + " " : ""}${lecturer.name}${lecturer.title_suffix ? ", " + lecturer.title_suffix : ""}`.trim(),
+              phone: lecturer.phone,
+              officeRoom: lecturer.office_room,
+              consultHours: lecturer.consult_hours,
+            },
+          });
+          return;
+        }
+
+        res.status(401).json({ error: "Kata sandi yang Anda masukkan salah." });
+        return;
+      }
+
+      // Cek apakah akun terdaftar sebagai Administrator
+      const admin = this.adminRepo.findByUsernameOrEmail(identifier);
+      if (admin) {
+        res.status(403).json({
+          error: "Akses ditolak. Akun Anda terdaftar sebagai Administrator. Silakan login melalui tab Admin.",
+        });
+        return;
+      }
+
+      res.status(401).json({
+        error: "Akun Dosen tidak ditemukan. Periksa NIDN atau Email Kampus Anda.",
+      });
+      return;
+    }
+
+    // =========================================================================
+    // 3. FALLBACK TANPA PARAMETER ROLE (Backward Compatibility)
+    // =========================================================================
     // 1. Cek apakah kredensial cocok dengan Administrator
     const admin = this.adminRepo.findByUsernameOrEmail(identifier);
     if (admin) {

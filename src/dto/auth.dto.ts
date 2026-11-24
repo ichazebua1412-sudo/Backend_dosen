@@ -8,6 +8,7 @@ export const loginDto = z.object({
   password: z
     .string()
     .min(1, "Kata sandi tidak boleh kosong."),
+  role: z.string().optional(),
 });
 
 export const forgotPasswordDto = z.object({

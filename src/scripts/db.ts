@@ -21,9 +21,17 @@ switch (action) {
   case "reset":
     console.log("⚠️ Melakukan reset database...");
     try {
+      db.exec("PRAGMA foreign_keys = OFF;");
       const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "gradia.db");
       // Drop all tables
       const tables = [
+        "grade_reviews",
+        "grade_appeals",
+        "notifications",
+        "assignment_submissions",
+        "assignments",
+        "attendances",
+        "attendance_sessions",
         "grades",
         "class_enrollments",
         "classes",
@@ -34,6 +42,7 @@ switch (action) {
       for (const t of tables) {
         db.exec(`DROP TABLE IF EXISTS ${t};`);
       }
+      db.exec("PRAGMA foreign_keys = ON;");
       console.log("🗑️ Semua tabel berhasil di-drop.");
       runSchema();
       console.log("✅ Schema berhasil dibuat ulang.");

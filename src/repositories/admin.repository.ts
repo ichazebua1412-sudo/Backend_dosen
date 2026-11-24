@@ -50,7 +50,10 @@ export class AdminRepository {
 
     const recentClasses = db.prepare(`
       SELECT c.id, c.code, c.title, c.sks, c.prodi, c.semester,
+             c.lecturer_id,
              l.name as lecturer_name,
+             l.title_prefix as lecturer_title_prefix,
+             l.title_suffix as lecturer_title_suffix,
              COUNT(ce.id) as student_count
       FROM classes c
       JOIN lecturers l ON c.lecturer_id = l.id
@@ -58,6 +61,24 @@ export class AdminRepository {
       GROUP BY c.id
       ORDER BY c.id DESC
       LIMIT 5
+    `).all() as any[];
+
+    const formattedRecentClasses = recentClasses.map((c) => {
+      const prefix = c.lecturer_title_prefix ? `${c.lecturer_title_prefix.trim()} ` : "";
+      const suffix = c.lecturer_title_suffix ? `, ${c.lecturer_title_suffix.trim()}` : "";
+      const lecturerFullName = `${prefix}${c.lecturer_name || ""}${suffix}`.trim() || c.lecturer_name || "";
+      return {
+        ...c,
+        lecturerFullName,
+      };
+    });
+
+    const prodiDistribution = db.prepare(`
+      SELECT prodi, COUNT(id) as count
+      FROM students
+      WHERE prodi IS NOT NULL AND TRIM(prodi) != ''
+      GROUP BY prodi
+      ORDER BY count DESC
     `).all();
 
     return {
@@ -68,8 +89,9 @@ export class AdminRepository {
         totalStudents,
         totalGrades,
       },
+      prodiDistribution,
       recentLecturers,
-      recentClasses,
+      recentClasses: formattedRecentClasses,
     };
   }
 }

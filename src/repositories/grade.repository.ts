@@ -134,6 +134,42 @@ export class GradeRepository {
     `);
     return stmt.all(lecturerId);
   }
+
+  getAppealsByClassId(classId: number): any[] {
+    const stmt = db.prepare(`
+      SELECT gr.id,
+             gr.student_id,
+             gr.class_id,
+             gr.component,
+             gr.component AS question_title,
+             gr.current_score,
+             gr.reason,
+             gr.reason AS comment,
+             gr.status,
+             gr.lecturer_response,
+             gr.created_at,
+             gr.created_at AS updated_at,
+             s.name AS student_name,
+             s.nim AS student_nim,
+             c.code AS class_code,
+             c.title AS class_title
+      FROM grade_reviews gr
+      JOIN students s ON gr.student_id = s.id
+      JOIN classes c ON gr.class_id = c.id
+      WHERE gr.class_id = ?
+      ORDER BY gr.created_at DESC
+    `);
+    return stmt.all(classId);
+  }
+
+  updateAppealStatus(appealId: number, status: string, response?: string): any {
+    db.prepare(`
+      UPDATE grade_reviews
+      SET status = ?, lecturer_response = COALESCE(?, lecturer_response)
+      WHERE id = ?
+    `).run(status, response !== undefined ? response : null, appealId);
+    return db.prepare("SELECT * FROM grade_reviews WHERE id = ?").get(appealId);
+  }
 }
 
 export const gradeRepository = new GradeRepository();

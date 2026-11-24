@@ -41,6 +41,7 @@ router.delete("/lecturers/:id", adminGuard, adminHandler.deleteLecturer);
 router.get("/students", adminGuard, adminHandler.getStudents);
 router.post("/students", adminGuard, validateBody(createStudentDto), adminHandler.createStudent);
 router.put("/students/:id", adminGuard, validateBody(updateStudentDto), adminHandler.updateStudent);
+router.put("/students/:id/reset-password", adminGuard, adminHandler.resetStudentPassword);
 router.delete("/students/:id", adminGuard, adminHandler.deleteStudent);
 
 // ==========================================

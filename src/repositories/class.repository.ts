@@ -12,6 +12,9 @@ export interface ClassRecord {
   capacity: number;
   schedule: string;
   room: string;
+  weight_tugas?: number;
+  weight_uts?: number;
+  weight_uas?: number;
   created_at: string;
 }
 
@@ -19,6 +22,7 @@ export class ClassRepository {
   findAllByLecturerId(lecturerId: number): any[] {
     const stmt = db.prepare(`
       SELECT c.id, c.code, c.title, c.sks, c.prodi, c.semester, c.academic_year, c.capacity, c.schedule, c.room,
+             c.weight_tugas, c.weight_uts, c.weight_uas,
              COUNT(ce.id) as enrolled_count
       FROM classes c
       LEFT JOIN class_enrollments ce ON c.id = ce.class_id
@@ -31,7 +35,8 @@ export class ClassRepository {
 
   findByIdAndLecturerId(classId: number, lecturerId: number): ClassRecord | null {
     const stmt = db.prepare(`
-      SELECT id, lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room, created_at
+      SELECT id, lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room,
+             weight_tugas, weight_uts, weight_uas, created_at
       FROM classes
       WHERE id = ? AND lecturer_id = ?
     `);
@@ -41,7 +46,8 @@ export class ClassRepository {
 
   findById(classId: number): ClassRecord | null {
     const stmt = db.prepare(`
-      SELECT id, lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room, created_at
+      SELECT id, lecturer_id, code, title, sks, prodi, semester, academic_year, capacity, schedule, room,
+             weight_tugas, weight_uts, weight_uas, created_at
       FROM classes
       WHERE id = ?
     `);
@@ -54,40 +60,39 @@ export class ClassRepository {
       SELECT c.id, c.code, c.title, c.sks, c.prodi, c.semester, c.academic_year, c.capacity, c.schedule, c.room,
              c.lecturer_id,
              l.name as lecturer_name, l.nidn as lecturer_nidn,
-             l.title_prefix, l.title_suffix,
+             l.title_prefix as lecturer_title_prefix, l.title_suffix as lecturer_title_suffix,
              COUNT(ce.id) as enrolled_count
       FROM classes c
       JOIN lecturers l ON c.lecturer_id = l.id
       LEFT JOIN class_enrollments ce ON c.id = ce.class_id
     `;
-    const conditions: string[] = [];
     const params: any[] = [];
+    const whereClauses: string[] = [];
 
-    if (lecturerId) {
-      conditions.push(`c.lecturer_id = ?`);
+    if (lecturerId !== undefined) {
+      whereClauses.push(`c.lecturer_id = ?`);
       params.push(lecturerId);
     }
 
     if (search && search.trim()) {
-      conditions.push(`(c.title LIKE ? OR c.code LIKE ? OR l.name LIKE ? OR l.nidn LIKE ?)`);
+      whereClauses.push(`(c.title LIKE ? OR c.code LIKE ? OR l.name LIKE ? OR l.nidn LIKE ?)`);
       const term = `%${search.trim()}%`;
       params.push(term, term, term, term);
     }
 
-    if (conditions.length > 0) {
-      query += ` WHERE ` + conditions.join(" AND ");
+    if (whereClauses.length > 0) {
+      query += ` WHERE ${whereClauses.join(" AND ")} `;
     }
 
     query += ` GROUP BY c.id ORDER BY c.id DESC `;
     const rows = db.prepare(query).all(...params) as any[];
-
     return rows.map((r) => {
-      const prefix = r.title_prefix ? `${r.title_prefix.trim()} ` : "";
-      const suffix = r.title_suffix ? `, ${r.title_suffix.trim()}` : "";
-      const fullName = `${prefix}${r.lecturer_name || ""}${suffix}`.trim() || r.lecturer_name || "";
+      const prefix = r.lecturer_title_prefix ? `${r.lecturer_title_prefix.trim()} ` : "";
+      const suffix = r.lecturer_title_suffix ? `, ${r.lecturer_title_suffix.trim()}` : "";
+      const lecturerFullName = `${prefix}${r.lecturer_name || ""}${suffix}`.trim() || r.lecturer_name || "";
       return {
         ...r,
-        lecturerFullName: fullName,
+        lecturerFullName,
       };
     });
   }
@@ -198,6 +203,17 @@ export class ClassRepository {
       data.room?.trim() || null,
       classId
     );
+  }
+
+  updateWeights(classId: number, weights: { tugas: number; uts: number; uas: number }): void {
+    const stmt = db.prepare(`
+      UPDATE classes
+      SET weight_tugas = ?,
+          weight_uts = ?,
+          weight_uas = ?
+      WHERE id = ?
+    `);
+    stmt.run(weights.tugas, weights.uts, weights.uas, classId);
   }
 
   delete(classId: number, lecturerId: number): void {
