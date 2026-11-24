@@ -71,6 +71,18 @@ export class PasswordResetRepository {
   ): void {
     db.exec("BEGIN");
     try {
+      const tokenUpdate = db
+        .prepare(
+          `UPDATE password_reset_tokens
+           SET used_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND used_at IS NULL`
+        )
+        .run(tokenId);
+
+      if (Number(tokenUpdate.changes) !== 1) {
+        throw new Error("TOKEN_ALREADY_USED");
+      }
+
       db.prepare("UPDATE lecturers SET password_hash = ? WHERE id = ?").run(
         passwordHash,
         lecturerId
@@ -78,8 +90,8 @@ export class PasswordResetRepository {
       db.prepare(
         `UPDATE password_reset_tokens
          SET used_at = CURRENT_TIMESTAMP
-         WHERE id = ? OR (lecturer_id = ? AND used_at IS NULL)`
-      ).run(tokenId, lecturerId);
+         WHERE lecturer_id = ? AND used_at IS NULL`
+      ).run(lecturerId);
       db.exec("COMMIT");
     } catch (err) {
       db.exec("ROLLBACK");

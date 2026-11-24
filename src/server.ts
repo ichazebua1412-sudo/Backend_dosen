@@ -39,7 +39,11 @@ app.use(
 // ==========================================
 // 2. LOGGING PERMINTAAN HTTP (MORGAN)
 // ==========================================
-app.use(morgan("dev"));
+morgan.token("safe-url", (req) => {
+  const rawUrl = (req as express.Request).originalUrl || req.url || "";
+  return rawUrl.replace(/([?&]token=)[^&]*/gi, "$1[REDACTED]");
+});
+app.use(morgan(":method :safe-url :status :response-time ms - :res[content-length]"));
 
 // ==========================================
 // 3. CORS & BODY PARSER
@@ -82,7 +86,7 @@ app.use("/api/student", studentRoutes);
 // 7. GLOBAL ERROR HANDLER
 // ==========================================
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error("Unhandled error:", err);
+  console.error("Unhandled error:", err?.message || "Unknown error");
   res.status(err.status || 500).json({
     error: err.message || "Terjadi kesalahan internal server.",
   });

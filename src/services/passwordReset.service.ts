@@ -119,11 +119,21 @@ export class PasswordResetService {
     }
 
     const passwordHash = bcrypt.hashSync(newPassword, 10);
-    this.resetRepo.markUsedAndUpdateLecturerPassword(
-      record.id,
-      record.lecturer_id,
-      passwordHash
-    );
+    try {
+      this.resetRepo.markUsedAndUpdateLecturerPassword(
+        record.id,
+        record.lecturer_id,
+        passwordHash
+      );
+    } catch (err: any) {
+      if (err?.message === "TOKEN_ALREADY_USED") {
+        throw new PasswordResetError(
+          400,
+          "Tautan reset kata sandi tidak valid atau sudah kedaluwarsa."
+        );
+      }
+      throw err;
+    }
   }
 }
 
