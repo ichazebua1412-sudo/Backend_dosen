@@ -1,4 +1,5 @@
 import { db } from "../db.js";
+import { isSameProdi } from "../utils/prodi.js";
 
 export interface StudentRecord {
   id: number;
@@ -43,10 +44,8 @@ export class StudentRepository {
 
   findAll(search?: string, prodi?: string): any[] {
     let query = `
-      SELECT s.id, s.nim, s.name, s.email, s.prodi, s.status,
-             COUNT(ce.id) as class_count
+      SELECT s.id, s.nim, s.name, s.email, s.prodi, s.status
       FROM students s
-      LEFT JOIN class_enrollments ce ON s.id = ce.student_id
     `;
     const conditions: string[] = [];
     const params: any[] = [];
@@ -66,8 +65,35 @@ export class StudentRepository {
       query += ` WHERE ` + conditions.join(" AND ");
     }
 
-    query += ` GROUP BY s.id ORDER BY s.nim ASC `;
-    return db.prepare(query).all(...params);
+    query += ` ORDER BY s.nim ASC `;
+    const students = db.prepare(query).all(...params) as any[];
+
+    const enrollments = db
+      .prepare(
+        `SELECT ce.student_id, c.prodi as class_prodi
+         FROM class_enrollments ce
+         JOIN classes c ON ce.class_id = c.id
+         JOIN lecturers l ON c.lecturer_id = l.id`
+      )
+      .all() as Array<{ student_id: number; class_prodi: string }>;
+
+    const countByStudent = new Map<number, number>();
+    const stuProdiMap = new Map<number, string>(students.map((s) => [s.id, s.prodi]));
+    for (const enr of enrollments) {
+      const stuProdi = stuProdiMap.get(enr.student_id);
+      if (stuProdi && isSameProdi(enr.class_prodi, stuProdi)) {
+        countByStudent.set(enr.student_id, (countByStudent.get(enr.student_id) || 0) + 1);
+      }
+    }
+
+    return students.map((s) => {
+      const count = countByStudent.get(s.id) || 0;
+      return {
+        ...s,
+        class_count: count,
+        enrolled_classes_count: count,
+      };
+    });
   }
 
   create(data: {
@@ -186,16 +212,20 @@ export class StudentRepository {
   getStudentCoursesWithGrades(studentId: number): any[] {
     const stmt = db.prepare(`
       SELECT c.id as class_id, c.code, c.title, c.sks, c.prodi, c.semester, c.academic_year,
-             c.schedule, c.room, l.name as lecturer_name,
+             c.schedule, c.room, l.name as lecturer_name, s.prodi as student_prodi,
              g.id as grade_id, g.tugas, g.uts, g.uas, g.final_score, g.letter_grade, g.status as grade_status, g.ai_feedback
       FROM class_enrollments ce
+      JOIN students s ON ce.student_id = s.id
       JOIN classes c ON ce.class_id = c.id
       JOIN lecturers l ON c.lecturer_id = l.id
       LEFT JOIN grades g ON ce.id = g.enrollment_id
       WHERE ce.student_id = ?
       ORDER BY c.semester ASC, c.code ASC
     `);
-    return stmt.all(studentId);
+    const rows = stmt.all(studentId) as any[];
+    return rows
+      .filter((r) => isSameProdi(r.prodi, r.student_prodi))
+      .map(({ student_prodi: _studentProdi, ...course }) => course);
   }
 
   getStudentDashboardStats(studentId: number) {

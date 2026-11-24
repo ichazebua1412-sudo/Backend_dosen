@@ -7,6 +7,8 @@ import { StudentRepository, studentRepository } from "../repositories/student.re
 import { ClassRepository, classRepository } from "../repositories/class.repository.js";
 import { GradeRepository, gradeRepository } from "../repositories/grade.repository.js";
 import { AuthRequest } from "../middleware/auth.js";
+import { passwordResetService, PasswordResetError } from "../services/passwordReset.service.js";
+import { isSameProdi } from "../utils/prodi.js";
 import {
   AdminLoginDto,
   CreateLecturerDto,
@@ -162,6 +164,34 @@ export class AdminHandler {
     }
 
     res.json({ message: "Data dosen berhasil diperbarui." });
+  };
+
+  resetLecturerPassword = async (req: AuthRequest, res: Response): Promise<void> => {
+    const lecturerId = Number(req.params.id);
+    const lecturer = this.lecturerRepo.findById(lecturerId);
+    if (!lecturer) {
+      res.status(404).json({ error: "Dosen tidak ditemukan." });
+      return;
+    }
+
+    try {
+      const result = await passwordResetService.requestLecturerReset({
+        lecturer,
+        requestedBy: "admin",
+        adminId: req.user?.id,
+      });
+      res.json({
+        message: `Tautan reset kata sandi telah dikirim ke email kampus dosen (${result.email}).`,
+      });
+    } catch (err: any) {
+      if (err instanceof PasswordResetError) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
+      res.status(500).json({
+        error: "Gagal mengirim tautan reset kata sandi dosen.",
+      });
+    }
   };
 
   deleteLecturer = (req: AuthRequest, res: Response): void => {
@@ -321,7 +351,16 @@ export class AdminHandler {
       return;
     }
 
-    const { studentId, nim, name, email, prodi } = req.body;
+    const currentEnrolled = this.studentRepo.findEnrolledByClassId(classId);
+    const maxCapacity = Number(existing.capacity) || 0;
+    if (maxCapacity > 0 && currentEnrolled.length >= maxCapacity) {
+      res.status(400).json({
+        error: `Kapasitas kelas sudah penuh (${currentEnrolled.length}/${maxCapacity} mahasiswa).`,
+      });
+      return;
+    }
+
+    const { studentId, nim, name, email } = req.body;
     let targetStudentId: number;
 
     if (studentId) {
@@ -330,13 +369,26 @@ export class AdminHandler {
         res.status(404).json({ error: "Mahasiswa tidak ditemukan." });
         return;
       }
+      if (!isSameProdi(stu.prodi, existing.prodi)) {
+        res.status(400).json({
+          error: `Mahasiswa ${stu.name} berasal dari prodi ${stu.prodi}, tidak sesuai dengan prodi kelas (${existing.prodi}).`,
+        });
+        return;
+      }
       targetStudentId = stu.id;
     } else if (nim && name) {
+      const existingByNim = this.studentRepo.findByNim(String(nim));
+      if (existingByNim && !isSameProdi(existingByNim.prodi, existing.prodi)) {
+        res.status(400).json({
+          error: `Mahasiswa dengan NIM ${existingByNim.nim} terdaftar di prodi ${existingByNim.prodi}, tidak sesuai dengan prodi kelas (${existing.prodi}).`,
+        });
+        return;
+      }
       targetStudentId = this.studentRepo.upsert({
         nim: String(nim),
         name: String(name),
         email: email ? String(email) : `${nim}@student.kampus.ac.id`,
-        prodi: prodi ? String(prodi) : existing.prodi,
+        prodi: existing.prodi,
         status: "Aktif",
       });
     } else {

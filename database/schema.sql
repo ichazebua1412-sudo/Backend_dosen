@@ -100,6 +100,20 @@ CREATE TABLE IF NOT EXISTS grades (
 );
 
 -- ---------------------------------------------------------------------
+-- 7. TABEL PASSWORD_RESET_TOKENS (Token Reset Sandi Dosen Sekali Pakai)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lecturer_id INTEGER NOT NULL REFERENCES lecturers(id) ON DELETE CASCADE,
+    token_hash TEXT UNIQUE NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME DEFAULT NULL,
+    requested_by TEXT NOT NULL DEFAULT 'self' CHECK (requested_by IN ('self', 'admin')),
+    created_by_admin_id INTEGER REFERENCES admins(id) ON DELETE SET NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---------------------------------------------------------------------
 -- INDEXES UNTUK OPTIMASI PERFORMA QUERY
 -- ---------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_classes_lecturer ON classes(lecturer_id);
@@ -108,3 +122,5 @@ CREATE INDEX IF NOT EXISTS idx_enrollments_student ON class_enrollments(student_
 CREATE INDEX IF NOT EXISTS idx_grades_enrollment ON grades(enrollment_id);
 CREATE INDEX IF NOT EXISTS idx_students_nim ON students(nim);
 CREATE INDEX IF NOT EXISTS idx_lecturers_nidn ON lecturers(nidn);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_lecturer ON password_reset_tokens(lecturer_id);
