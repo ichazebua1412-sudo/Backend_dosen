@@ -201,4 +201,3 @@ CREATE INDEX IF NOT EXISTS idx_assignments_class ON assignments(class_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_student ON assignment_submissions(student_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_student ON notifications(student_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_student ON grade_reviews(student_id);
->>>>>>> 2ba7734d819f632c1c804a49adf35587781b34a1
