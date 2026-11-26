@@ -109,6 +109,23 @@ export function initDatabase(): void {
     console.error("Gagal memeriksa atau migrasi kolom bobot classes:", err.message);
   }
 
+  // Migration check: pastikan kolom alasan_koreksi, audit_dosen, updated_at ada di tabel attendances
+  try {
+    const attInfo = db.prepare("PRAGMA table_info(attendances)").all() as any[];
+    const attCols = attInfo.map((col: any) => col.name);
+    if (!attCols.includes("alasan_koreksi")) {
+      db.exec("ALTER TABLE attendances ADD COLUMN alasan_koreksi TEXT DEFAULT '';");
+    }
+    if (!attCols.includes("audit_dosen")) {
+      db.exec("ALTER TABLE attendances ADD COLUMN audit_dosen INTEGER DEFAULT 0;");
+    }
+    if (!attCols.includes("updated_at")) {
+      db.exec("ALTER TABLE attendances ADD COLUMN updated_at DATETIME DEFAULT NULL;");
+    }
+  } catch (err: any) {
+    console.error("Gagal memeriksa atau migrasi kolom attendances:", err.message);
+  }
+
   try {
     const adminCount = (db.prepare("SELECT COUNT(id) as count FROM admins").get() as any)?.count || 0;
     if (adminCount === 0) {

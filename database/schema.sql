@@ -127,9 +127,26 @@ CREATE TABLE IF NOT EXISTS attendances (
     status TEXT NOT NULL CHECK(status IN ('hadir', 'izin', 'sakit', 'alpa')),
     notes TEXT DEFAULT '',
     attachment_url TEXT DEFAULT '',
+    alasan_koreksi TEXT DEFAULT '',
+    audit_dosen INTEGER DEFAULT 0,
     date DATE DEFAULT CURRENT_DATE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(class_id, student_id, pertemuan)
+);
+
+-- ---------------------------------------------------------------------
+-- 8B. TABEL ATTENDANCE_SESSIONS (Sesi Buka/Tutup Presensi per Pertemuan)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS attendance_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    pertemuan INTEGER NOT NULL DEFAULT 1,
+    is_open INTEGER NOT NULL DEFAULT 0,
+    opened_at DATETIME DEFAULT NULL,
+    closed_at DATETIME DEFAULT NULL,
+    date DATE DEFAULT CURRENT_DATE,
+    UNIQUE(class_id, pertemuan)
 );
 
 -- ---------------------------------------------------------------------

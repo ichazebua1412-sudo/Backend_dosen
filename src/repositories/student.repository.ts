@@ -342,6 +342,14 @@ export class StudentRepository {
       const alpa = stats?.alpa || 0;
       const persen = total > 0 ? Math.round((hadir / total) * 100) : 100;
 
+      // Sinkronisasi sesi presensi aktif dari dosen (attendance_sessions)
+      const openSession = db.prepare(`
+        SELECT id, pertemuan, opened_at
+        FROM attendance_sessions
+        WHERE class_id = ? AND is_open = 1
+        ORDER BY pertemuan DESC LIMIT 1
+      `).get(c.class_id) as any;
+
       return {
         class_id: c.class_id,
         nama: c.title,
@@ -355,7 +363,8 @@ export class StudentRepository {
         alpa,
         persen,
         keterangan: `${hadir} dari ${total} pertemuan dihadiri`,
-        dibuka: c.code === "IF202", // Presensi terbuka untuk sesi aktif
+        dibuka: !!openSession,
+        active_pertemuan: openSession ? openSession.pertemuan : null,
       };
     });
 
@@ -370,11 +379,17 @@ export class StudentRepository {
     const activeCourse = perCourse.find((c) => c.dibuka) || null;
     let activeSession = null;
     if (activeCourse) {
-      const todayAttendance = db.prepare(`
-        SELECT status, notes, date FROM attendances
-        WHERE student_id = ? AND class_id = ? AND date = DATE('now')
-        ORDER BY id DESC LIMIT 1
-      `).get(studentId, activeCourse.class_id) as any;
+      const todayAttendance = activeCourse.active_pertemuan
+        ? (db.prepare(`
+            SELECT status, notes, date, audit_dosen, alasan_koreksi FROM attendances
+            WHERE student_id = ? AND class_id = ? AND pertemuan = ?
+            ORDER BY id DESC LIMIT 1
+          `).get(studentId, activeCourse.class_id, activeCourse.active_pertemuan) as any)
+        : (db.prepare(`
+            SELECT status, notes, date, audit_dosen, alasan_koreksi FROM attendances
+            WHERE student_id = ? AND class_id = ? AND date = DATE('now')
+            ORDER BY id DESC LIMIT 1
+          `).get(studentId, activeCourse.class_id) as any);
 
       activeSession = {
         class_id: activeCourse.class_id,
@@ -382,10 +397,13 @@ export class StudentRepository {
         code: activeCourse.code,
         schedule: activeCourse.schedule,
         room: activeCourse.room,
-        batas: "Ditutup 10:15",
+        pertemuan: activeCourse.active_pertemuan || 1,
+        batas: "Sesi Aktif",
         sudahAbsen: !!todayAttendance,
         status: todayAttendance ? todayAttendance.status : null,
         notes: todayAttendance ? todayAttendance.notes : null,
+        audit_dosen: todayAttendance ? Boolean(todayAttendance.audit_dosen) : false,
+        alasan_koreksi: todayAttendance ? todayAttendance.alasan_koreksi : null,
       };
     }
 
@@ -402,21 +420,35 @@ export class StudentRepository {
   }
 
   checkInAttendance(studentId: number, classId: number, type: "Luring" | "Daring" = "Luring") {
-    const existing = db.prepare(`
-      SELECT id FROM attendances
-      WHERE class_id = ? AND student_id = ? AND date = DATE('now')
-    `).get(classId, studentId) as any;
+    const openSession = db.prepare(`
+      SELECT pertemuan FROM attendance_sessions
+      WHERE class_id = ? AND is_open = 1
+      ORDER BY pertemuan DESC LIMIT 1
+    `).get(classId) as { pertemuan: number } | undefined;
+
+    const targetPertemuan = openSession?.pertemuan;
+
+    const existing = targetPertemuan
+      ? (db.prepare(`
+          SELECT id, pertemuan FROM attendances
+          WHERE class_id = ? AND student_id = ? AND pertemuan = ?
+        `).get(classId, studentId, targetPertemuan) as any)
+      : (db.prepare(`
+          SELECT id, pertemuan FROM attendances
+          WHERE class_id = ? AND student_id = ? AND date = DATE('now')
+        `).get(classId, studentId) as any);
 
     if (existing) {
       db.prepare(`
         UPDATE attendances
-        SET status = 'hadir', notes = ?
+        SET status = 'hadir', notes = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(`Hadir · ${type}`, existing.id);
 
       return {
         id: existing.id,
         class_id: classId,
+        pertemuan: existing.pertemuan,
         status: "hadir",
         notes: `Hadir · ${type}`,
       };
@@ -428,7 +460,7 @@ export class StudentRepository {
       WHERE class_id = ? AND student_id = ?
     `).get(classId, studentId) as any;
 
-    const pertemuan = nextRow?.next_p || 1;
+    const pertemuan = targetPertemuan || nextRow?.next_p || 1;
 
     const stmt = db.prepare(`
       INSERT INTO attendances (class_id, student_id, pertemuan, status, notes, date)
@@ -446,21 +478,35 @@ export class StudentRepository {
   }
 
   applyLeave(studentId: number, classId: number, status: "izin" | "sakit", reason: string, attachmentUrl?: string) {
-    const existing = db.prepare(`
-      SELECT id FROM attendances
-      WHERE class_id = ? AND student_id = ? AND date = DATE('now')
-    `).get(classId, studentId) as any;
+    const openSession = db.prepare(`
+      SELECT pertemuan FROM attendance_sessions
+      WHERE class_id = ? AND is_open = 1
+      ORDER BY pertemuan DESC LIMIT 1
+    `).get(classId) as { pertemuan: number } | undefined;
+
+    const targetPertemuan = openSession?.pertemuan;
+
+    const existing = targetPertemuan
+      ? (db.prepare(`
+          SELECT id, pertemuan FROM attendances
+          WHERE class_id = ? AND student_id = ? AND pertemuan = ?
+        `).get(classId, studentId, targetPertemuan) as any)
+      : (db.prepare(`
+          SELECT id, pertemuan FROM attendances
+          WHERE class_id = ? AND student_id = ? AND date = DATE('now')
+        `).get(classId, studentId) as any);
 
     if (existing) {
       db.prepare(`
         UPDATE attendances
-        SET status = ?, notes = ?, attachment_url = ?
+        SET status = ?, notes = ?, attachment_url = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(status, reason.trim(), attachmentUrl?.trim() || "", existing.id);
 
       return {
         id: existing.id,
         class_id: classId,
+        pertemuan: existing.pertemuan,
         status,
         reason,
         attachmentUrl,
@@ -473,7 +519,7 @@ export class StudentRepository {
       WHERE class_id = ? AND student_id = ?
     `).get(classId, studentId) as any;
 
-    const pertemuan = nextRow?.next_p || 1;
+    const pertemuan = targetPertemuan || nextRow?.next_p || 1;
 
     const stmt = db.prepare(`
       INSERT INTO attendances (class_id, student_id, pertemuan, status, notes, attachment_url, date)
