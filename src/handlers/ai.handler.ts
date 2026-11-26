@@ -7,6 +7,7 @@ import { AiFeedbackDto } from "../dto/ai.dto.js";
 dotenv.config();
 
 const apiKey = process.env.GEMINI_API_KEY;
+const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 // Heuristic fallback generator (Ponytail zero-fail guarantee)
@@ -38,7 +39,7 @@ export class AiHandler {
 
       if (genAI && apiKey && apiKey.trim().length > 0) {
         try {
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const model = genAI.getGenerativeModel({ model: geminiModel });
           const prompt = `Sebagai dosen pengampu OBE untuk kelas "${className || "Kelas"}", buatkan telaah AI dalam format JSON dengan kunci "strength", "improvement", dan "recommendation" (Bahasa Indonesia ringkas):
 Total: ${totalStudents} mahasiswa, Rata-rata: ${avgScore}, Kelulusan: ${passRate}%, Remedial: ${remedialCount}.`;
           const result = await model.generateContent(prompt);
@@ -71,7 +72,7 @@ Total: ${totalStudents} mahasiswa, Rata-rata: ${avgScore}, Kelulusan: ${passRate
     // If Gemini API Key is available, use Gemini model
     if (genAI && apiKey && apiKey.trim().length > 0) {
       try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: geminiModel });
         const prompt = `Sebagai dosen pengampu mata kuliah "${courseName || "Akademik"}", berikan umpan balik evaluasi akademik (AI feedback) berbasis Outcome-Based Education (OBE) secara ringkas, konstruktif, dan profesional (maksimal 2 kalimat dalam Bahasa Indonesia) untuk mahasiswa:
 Nama: ${studentName} (${nim || "-"})
 Tugas: ${numTugas}, UTS: ${numUts}, UAS: ${numUas}, Nilai Akhir: ${numScore} (${letterGrade || "-"}).`;
