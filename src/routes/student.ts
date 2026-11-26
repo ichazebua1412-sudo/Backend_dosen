@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { studentHandler } from "../handlers/student.handler.js";
+import { aiHandler } from "../handlers/ai.handler.js";
 import { studentGuard } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
+import { aiFeedbackDto } from "../dto/ai.dto.js";
 import {
   studentLoginDto,
   checkInAttendanceDto,
@@ -31,6 +33,9 @@ router.get("/grades", studentGuard, studentHandler.getGrades);
 
 // GET /ai-feedback - Ulasan evaluasi capaian OBE berbasis AI
 router.get("/ai-feedback", studentGuard, studentHandler.getAiFeedback);
+
+// POST /ai-feedback - Generate umpan balik evaluasi OBE dengan AI
+router.post("/ai-feedback", studentGuard, validateBody(aiFeedbackDto), aiHandler.generateFeedback);
 
 // -------------------------------------------------------------
 // 2. FITUR MOBILE: PRESENSI & KEHADIRAN (ATTENDANCES)

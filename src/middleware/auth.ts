@@ -107,3 +107,28 @@ export function studentGuard(req: AuthRequest, res: Response, next: NextFunction
   }
 }
 
+/**
+ * anyAuth - Izinkan akun yang memiliki token valid (dosen, admin, maupun mahasiswa).
+ */
+export function anyAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Akses ditolak. Token tidak disediakan." });
+    return;
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    req.user = decoded;
+    next();
+  } catch (err: any) {
+    if (err.name === "TokenExpiredError") {
+      res.status(401).json({ error: "Sesi telah berakhir atau token sudah kedaluwarsa. Silakan login kembali." });
+      return;
+    }
+    res.status(401).json({ error: "Sesi telah berakhir atau token tidak valid. Silakan login kembali." });
+  }
+}
+
+
