@@ -16,6 +16,7 @@ import aiRoutes from "./routes/ai.js";
 import adminRoutes from "./routes/admin.js";
 import studentRoutes from "./routes/student.js";
 import uploadRoutes from "./routes/upload.js";
+import realtimeRoutes from "./routes/realtime.js";
 
 dotenv.config();
 
@@ -113,6 +114,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/upload", uploadRoutes); // Upload file → Vercel Blob (wajib via backend)
+app.use("/api/realtime", realtimeRoutes); // SSE real-time sync untuk mobile & web
 
 // ==========================================
 // 7. GLOBAL ERROR HANDLER

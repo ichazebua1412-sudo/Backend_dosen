@@ -4,6 +4,7 @@ import { ClassRepository, classRepository } from "../repositories/class.reposito
 import { StudentRepository, studentRepository } from "../repositories/student.repository.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { BatchUpdateGradesDto } from "../dto/grade.dto.js";
+import { realtimeService } from "../services/realtime.service.js";
 
 export function calculateScore(
   tugas: number | null,
@@ -106,6 +107,10 @@ export class GradeHandler {
 
     try {
       this.gradeRepo.batchUpsert(preparedItems);
+      realtimeService.emitToClassStudents(classId, "grades_updated", {
+        title: classData.title,
+        code: classData.code,
+      });
       res.json({
         message: "Rekap nilai berhasil disimpan.",
         weights: {
@@ -145,6 +150,12 @@ export class GradeHandler {
     }
 
     const updated = this.gradeRepo.updateAppealStatus(appealId, status, lecturer_response);
+    if (updated?.student_id) {
+      realtimeService.emitToUser("student", Number(updated.student_id), "grade_review_updated", {
+        appealId,
+        status,
+      });
+    }
     res.json({
       message: "Status pengajuan koreksi nilai berhasil diperbarui.",
       appeal: updated,

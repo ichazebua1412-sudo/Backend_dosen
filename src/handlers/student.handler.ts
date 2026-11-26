@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { StudentRepository, studentRepository } from "../repositories/student.repository.js";
 import { AuthRequest } from "../middleware/auth.js";
+import { realtimeService } from "../services/realtime.service.js";
 import {
   StudentLoginDto,
   ApplyLeaveDto,
@@ -133,6 +134,9 @@ export class StudentHandler {
       body.type
     );
 
+    realtimeService.emitToUser("student", studentId, "attendance_updated", { classId: body.classId });
+    realtimeService.emitToClassLecturer(body.classId, "attendance_updated", { studentId });
+
     res.status(201).json({
       message: `Presensi ${body.type || "Luring"} berhasil dicatat.`,
       attendance: result,
@@ -150,6 +154,9 @@ export class StudentHandler {
       body.reason,
       body.attachmentUrl
     );
+
+    realtimeService.emitToUser("student", studentId, "attendance_updated", { classId: body.classId });
+    realtimeService.emitToClassLecturer(body.classId, "attendance_updated", { studentId, status: body.status });
 
     res.status(201).json({
       message: `Pengajuan ${body.status} berhasil disimpan.`,
@@ -184,6 +191,8 @@ export class StudentHandler {
       body.fileUrl,
       body.notes
     );
+
+    realtimeService.emitToUser("student", studentId, "assignment_submitted", { assignmentId });
 
     res.json(result);
   };
@@ -232,6 +241,10 @@ export class StudentHandler {
     const body = req.body as CreateGradeReviewDto;
 
     const result = this.studentRepo.createGradeReview(studentId, body);
+    realtimeService.emitToClassLecturer(body.classId, "grade_review_created", {
+      studentId,
+      component: body.component,
+    });
     res.status(201).json(result);
   };
 
