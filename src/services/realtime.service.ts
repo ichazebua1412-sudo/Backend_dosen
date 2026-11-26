@@ -77,6 +77,40 @@ class RealtimeService {
     }
   }
 
+  notifyStudent(studentId: number, category: string, title: string, message: string): void {
+    try {
+      db.prepare(
+        `INSERT INTO notifications (student_id, category, title, message, is_read)
+         VALUES (?, ?, ?, ?, 0)`
+      ).run(studentId, category, title, message);
+      this.emitToUser("student", studentId, "notification_created", { category, title });
+    } catch {
+      // Abaikan jika tabel belum siap
+    }
+  }
+
+  notifyClassStudents(classId: number, category: string, title: string, message: string): void {
+    try {
+      const rows = db
+        .prepare("SELECT student_id FROM class_enrollments WHERE class_id = ?")
+        .all(classId) as Array<{ student_id: number }>;
+      const stmt = db.prepare(
+        `INSERT INTO notifications (student_id, category, title, message, is_read)
+         VALUES (?, ?, ?, ?, 0)`
+      );
+      for (const row of rows) {
+        stmt.run(row.student_id, category, title, message);
+        this.emitToUser("student", Number(row.student_id), "notification_created", {
+          classId,
+          category,
+          title,
+        });
+      }
+    } catch {
+      // Abaikan jika tabel belum siap
+    }
+  }
+
   emitToClassLecturer(classId: number, event: string, data: Record<string, any> = {}): void {
     try {
       const row = db

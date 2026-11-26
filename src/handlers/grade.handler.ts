@@ -111,6 +111,12 @@ export class GradeHandler {
         title: classData.title,
         code: classData.code,
       });
+      realtimeService.notifyClassStudents(
+        classId,
+        "nilai",
+        `Nilai ${classData.code} Diperbarui`,
+        `Dosen telah memperbarui rekap nilai untuk mata kuliah ${classData.title} (${classData.code}).`
+      );
       res.json({
         message: "Rekap nilai berhasil disimpan.",
         weights: {
@@ -151,10 +157,19 @@ export class GradeHandler {
 
     const updated = this.gradeRepo.updateAppealStatus(appealId, status, lecturer_response);
     if (updated?.student_id) {
+      const statusLabel = status === "approved" ? "Disetujui" : status === "rejected" ? "Ditolak" : "Diproses";
       realtimeService.emitToUser("student", Number(updated.student_id), "grade_review_updated", {
         appealId,
         status,
       });
+      realtimeService.notifyStudent(
+        Number(updated.student_id),
+        "nilai",
+        `Koreksi Nilai ${statusLabel}`,
+        lecturer_response
+          ? `Pengajuan koreksi nilai Anda berstatus ${statusLabel}. Catatan dosen: ${lecturer_response}`
+          : `Pengajuan koreksi nilai Anda kini berstatus ${statusLabel}.`
+      );
     }
     res.json({
       message: "Status pengajuan koreksi nilai berhasil diperbarui.",
