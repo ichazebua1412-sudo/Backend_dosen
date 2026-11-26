@@ -33,6 +33,7 @@ router.post("/lecturers", adminGuard, validateBody(createLecturerDto), adminHand
 router.put("/lecturers/:id", adminGuard, validateBody(updateLecturerDto), adminHandler.updateLecturer);
 router.post("/lecturers/:id/reset-password", adminGuard, adminHandler.resetLecturerPassword);
 router.put("/lecturers/:id/reset-password", adminGuard, adminHandler.resetLecturerPassword);
+router.post("/lecturers/:id/impersonate", adminGuard, adminHandler.impersonateLecturer);
 router.delete("/lecturers/:id", adminGuard, adminHandler.deleteLecturer);
 
 // ==========================================

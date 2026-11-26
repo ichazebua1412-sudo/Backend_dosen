@@ -215,6 +215,55 @@ export class AdminHandler {
     res.json({ message: "Akun dosen berhasil dihapus beserta kelas terkait." });
   };
 
+  impersonateLecturer = (req: AuthRequest, res: Response): void => {
+    const lecturerId = Number(req.params.id);
+    const lecturer = this.lecturerRepo.findById(lecturerId);
+    if (!lecturer) {
+      res.status(404).json({ error: "Dosen tidak ditemukan." });
+      return;
+    }
+
+    if (lecturer.status === "inactive") {
+      res.status(403).json({
+        error: "Akun dosen sedang dinonaktifkan dan tidak dapat diimpersonasi.",
+      });
+      return;
+    }
+
+    const token = jwt.sign(
+      { id: lecturer.id, nidn: lecturer.nidn, email: lecturer.email, role: "dosen" },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    const fullName = `${lecturer.title_prefix ? lecturer.title_prefix + " " : ""}${lecturer.name}${lecturer.title_suffix ? ", " + lecturer.title_suffix : ""}`.trim();
+
+    res.json({
+      message: `Berhasil masuk sebagai ${fullName}.`,
+      token,
+      role: "dosen",
+      user: {
+        id: lecturer.id,
+        nidn: lecturer.nidn,
+        email: lecturer.email,
+        name: lecturer.name,
+        role: "dosen",
+      },
+      lecturer: {
+        id: lecturer.id,
+        nidn: lecturer.nidn,
+        email: lecturer.email,
+        name: lecturer.name,
+        titlePrefix: lecturer.title_prefix,
+        titleSuffix: lecturer.title_suffix,
+        fullName,
+        phone: lecturer.phone,
+        officeRoom: lecturer.office_room,
+        consultHours: lecturer.consult_hours,
+      },
+    });
+  };
+
   getStudents = (req: AuthRequest, res: Response): void => {
     const { search, prodi } = req.query;
     const students = this.studentRepo.findAll(
