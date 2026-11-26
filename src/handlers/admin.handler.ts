@@ -303,6 +303,9 @@ export class AdminHandler {
       return;
     }
 
+    const requestedCapacity = capacity ? Number(capacity) : 40;
+    const effectiveCapacity = Math.max(requestedCapacity, 30);
+
     const classId = this.classRepo.create({
       lecturerId: Number(lecturer_id),
       code: String(code),
@@ -311,14 +314,17 @@ export class AdminHandler {
       prodi: prodi ? String(prodi) : "Teknik Informatika",
       semester: semester ? Number(semester) : 1,
       academicYear: academic_year ? String(academic_year) : "2024/2025 Ganjil",
-      capacity: capacity ? Number(capacity) : 40,
+      capacity: effectiveCapacity,
       schedule: schedule ? String(schedule) : "",
       room: room ? String(room) : "",
     });
 
+    const addedCount = this.fillMinimumStudentsForClass(classId, 30);
+
     res.status(201).json({
-      message: "Kelas berhasil dibuat.",
+      message: `Kelas berhasil dibuat dan otomatis diisi ${addedCount} mahasiswa (minimal 30 mahasiswa).`,
       classId,
+      addedCount,
     });
   };
 
@@ -447,6 +453,83 @@ export class AdminHandler {
     this.studentRepo.unenrollStudent(classId, studentId);
     res.json({ message: "Mahasiswa berhasil dikeluarkan dari kelas." });
   };
+
+  fillClassMinimumStudents = (req: AuthRequest, res: Response): void => {
+    const classId = Number(req.params.id);
+    const existing = this.classRepo.findById(classId);
+    if (!existing) {
+      res.status(404).json({ error: "Kelas tidak ditemukan." });
+      return;
+    }
+
+    const addedCount = this.fillMinimumStudentsForClass(classId, 30);
+    const updatedStudents = this.studentRepo.findEnrolledByClassId(classId);
+
+    res.json({
+      message:
+        addedCount > 0
+          ? `Berhasil menambahkan ${addedCount} mahasiswa. Total mahasiswa kelas kini ${updatedStudents.length} orang.`
+          : `Kelas sudah memenuhi minimal 30 mahasiswa (${updatedStudents.length} orang).`,
+      addedCount,
+      totalEnrolled: updatedStudents.length,
+    });
+  };
+
+  private fillMinimumStudentsForClass(classId: number, minCount = 30): number {
+    const cls = this.classRepo.findById(classId);
+    if (!cls) return 0;
+
+    const currentEnrolled = this.studentRepo.findEnrolledByClassId(classId);
+    if (currentEnrolled.length >= minCount) return 0;
+
+    if (Number(cls.capacity) < minCount) {
+      this.classRepo.adminUpdate(classId, { capacity: Math.max(40, minCount) });
+    }
+
+    const enrolledIds = new Set(currentEnrolled.map((s: any) => s.id));
+    const allStudents = this.studentRepo.findAll();
+    const eligibleStudents = allStudents.filter(
+      (s: any) => !enrolledIds.has(s.id) && isSameProdi(s.prodi, cls.prodi)
+    );
+
+    let needed = minCount - currentEnrolled.length;
+    let added = 0;
+
+    for (const stu of eligibleStudents) {
+      if (needed <= 0) break;
+      const enrollmentId = this.studentRepo.enrollStudent(classId, stu.id);
+      this.gradeRepo.initEmptyGrade(enrollmentId);
+      enrolledIds.add(stu.id);
+      added++;
+      needed--;
+    }
+
+    if (needed > 0) {
+      const defaultHash = bcrypt.hashSync("password123", 10);
+      const prodiPrefix =
+        (cls.prodi || "MHS").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "MH";
+      let seq = 1;
+      while (needed > 0) {
+        const genNim = `24${classId}${String(seq).padStart(4, "0")}`;
+        seq++;
+        if (this.studentRepo.findByNim(genNim)) continue;
+        const newStudentId = this.studentRepo.create({
+          nim: genNim,
+          name: `Mahasiswa ${prodiPrefix} ${seq - 1}`,
+          email: `${genNim}@student.gradia.ac.id`,
+          passwordHash: defaultHash,
+          prodi: cls.prodi,
+          status: "Aktif",
+        });
+        const enrollmentId = this.studentRepo.enrollStudent(classId, newStudentId);
+        this.gradeRepo.initEmptyGrade(enrollmentId);
+        added++;
+        needed--;
+      }
+    }
+
+    return added;
+  }
 }
 
 export const adminHandler = new AdminHandler();

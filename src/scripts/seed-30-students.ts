@@ -1,6 +1,5 @@
 import { db } from "../db.js";
-import fs from "fs";
-import path from "path";
+import { isSameProdi } from "../utils/prodi.js";
 
 const defaultPasswordHash = "$2b$10$K2K8WxZHFbU04LaxiJPK4OvP.nXJqfst7X8OX5O6ERIUzDnqDQxuu"; // password123
 
@@ -139,7 +138,7 @@ export function seedClassesWithMin30Students(): void {
   ];
 
   const si102Nims = [
-    "251234567899", "22020201",
+    "22020201",
     "23020202", "23020203", "23020204", "23020205", "23020206", "23020207",
     "23020208", "23020209", "23020210", "23020211", "23020212", "23020213",
     "23020214", "23020215", "23020216", "23020217", "23020218", "23020219",
@@ -160,8 +159,25 @@ export function seedClassesWithMin30Students(): void {
     else if (cls.code === "IF301") targetNims = if301Nims;
     else if (cls.code === "SI102") targetNims = si102Nims;
     else {
-      // Default fallback: assign 32 students
-      targetNims = allStudents.slice(0, 32).map((s) => s.nim);
+      // Filter students matching the class prodi; generate additional students if < 30
+      const matchingStudents = allStudents.filter((s) => isSameProdi(s.prodi, cls.prodi));
+      if (matchingStudents.length < 30) {
+        const needed = 30 - matchingStudents.length;
+        const prodiPrefix = (cls.prodi || "PR").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "PR";
+        for (let idx = 1; idx <= needed; idx++) {
+          const genNim = `24${cls.id}${String(idx).padStart(4, "0")}`;
+          const genName = `Mahasiswa ${prodiPrefix} ${idx}`;
+          const genEmail = `${genNim.toLowerCase()}@student.gradia.ac.id`;
+          insertStudent.run(genNim, genName, genEmail, defaultPasswordHash, cls.prodi, "Aktif");
+          const inserted = db.prepare("SELECT id, nim, name, prodi FROM students WHERE nim = ?").get(genNim) as any;
+          if (inserted) {
+            studentByNim[inserted.nim] = inserted.id;
+            allStudents.push(inserted);
+            matchingStudents.push(inserted);
+          }
+        }
+      }
+      targetNims = matchingStudents.slice(0, 32).map((s) => s.nim);
     }
 
     // Ensure capacity accommodates all students

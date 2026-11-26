@@ -116,6 +116,28 @@ export function initDatabase(): void {
       runSeed();
       console.log("✅ Seed data berhasil diterapkan.");
     }
+
+    const underfilled = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM (
+           SELECT c.id, COUNT(ce.id) as enrolled_count
+           FROM classes c
+           LEFT JOIN class_enrollments ce ON c.id = ce.class_id
+           GROUP BY c.id
+           HAVING enrolled_count < 30
+         )`
+      )
+      .get() as any;
+
+    if (underfilled && underfilled.count > 0) {
+      import("./scripts/seed-30-students.js")
+        .then(({ seedClassesWithMin30Students }) => {
+          seedClassesWithMin30Students();
+        })
+        .catch((err) => {
+          console.error("Gagal menjalankan seed minimal 30 mahasiswa:", err.message);
+        });
+    }
   } catch (err: any) {
     console.error("Gagal memeriksa atau menjalankan seed:", err.message);
   }

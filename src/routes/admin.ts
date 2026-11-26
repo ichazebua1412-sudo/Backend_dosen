@@ -53,6 +53,7 @@ router.put("/classes/:id", adminGuard, adminHandler.updateClass);
 router.delete("/classes/:id", adminGuard, adminHandler.deleteClass);
 router.get("/classes/:id/students", adminGuard, adminHandler.getClassStudents);
 router.post("/classes/:id/students", adminGuard, adminHandler.enrollStudentToClass);
+router.post("/classes/:id/fill-minimum", adminGuard, adminHandler.fillClassMinimumStudents);
 router.delete("/classes/:classId/students/:studentId", adminGuard, adminHandler.unenrollStudentFromClass);
 
 export default router;
