@@ -29,7 +29,9 @@ export class UploadHandler {
         ? (folderParam as "attachments" | "assignments" | "avatars")
         : "attachments";
 
-      const result = await uploadToBlob(file.buffer, file.originalname, folder);
+      const host = req.get("host");
+      const baseUrl = host ? `${req.protocol}://${host}` : undefined;
+      const result = await uploadToBlob(file.buffer, file.originalname, folder, baseUrl);
 
       res.status(201).json({
         message: "File berhasil diunggah.",

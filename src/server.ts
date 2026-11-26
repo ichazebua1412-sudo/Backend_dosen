@@ -1,3 +1,4 @@
+import path from "node:path";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -114,7 +115,8 @@ app.use("/api/lecturer", lecturerRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/student", studentRoutes);
-app.use("/api/upload", uploadRoutes); // Upload file → Vercel Blob (wajib via backend)
+app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+app.use("/api/upload", uploadRoutes); // Upload file → Vercel Blob / fallback lokal (wajib via backend)
 app.use("/api/realtime", realtimeRoutes); // SSE real-time sync untuk mobile & web
 app.use("/api/attendances", attendanceRoutes);
 

@@ -1,24 +1,9 @@
 import { Router } from "express";
-import { authGuard, studentGuard } from "../middleware/auth.js";
+import { anyAuth } from "../middleware/auth.js";
 import { uploadMiddleware } from "../middleware/upload.js";
 import { uploadHandler } from "../handlers/upload.handler.js";
-import type { Response, NextFunction } from "express";
-import type { AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
-
-/**
- * anyAuth — izinkan dosen (authGuard) ATAU mahasiswa (studentGuard).
- * Token wajib ada; request tanpa token ditolak.
- */
-function anyAuth(req: AuthRequest, res: Response, next: NextFunction): void {
-  authGuard(req, res, (errDosen?: any) => {
-    if (!errDosen && req.user) {
-      return next();
-    }
-    studentGuard(req, res, next);
-  });
-}
 
 /**
  * POST /api/upload
