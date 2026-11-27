@@ -3,6 +3,7 @@ import { AuthRequest } from "../middleware/auth.js";
 import { ClassRepository, classRepository } from "../repositories/class.repository.js";
 import { AttendanceRepository, attendanceRepository } from "../repositories/attendance.repository.js";
 import { CorrectAttendanceDto, ToggleSessionDto } from "../dto/attendance.dto.js";
+import { realtimeService } from "../services/realtime.service.js";
 
 export class AttendanceHandler {
   constructor(
@@ -27,6 +28,22 @@ export class AttendanceHandler {
     }
 
     const session = this.attendanceRepo.toggleSession(classId, pertemuan, isOpen);
+    realtimeService.emitToClassStudents(classId, "attendance_updated", {
+      pertemuan,
+      isOpen,
+    });
+    realtimeService.emitToClassLecturer(classId, "attendance_updated", {
+      pertemuan,
+      isOpen,
+    });
+    if (isOpen) {
+      realtimeService.notifyClassStudents(
+        classId,
+        "pengumuman",
+        `Presensi ${classCheck.code} Dibuka`,
+        `Sesi presensi Pertemuan ${pertemuan} untuk ${classCheck.title} telah dibuka. Silakan lakukan presensi.`
+      );
+    }
     res.json({
       message: isOpen
         ? `Sesi presensi Pertemuan ${pertemuan} dibuka untuk mahasiswa.`
@@ -90,6 +107,23 @@ export class AttendanceHandler {
       pertemuan,
       status,
       alasan_koreksi
+    );
+
+    realtimeService.emitToUser("student", studentId, "attendance_updated", {
+      classId,
+      pertemuan,
+      status,
+    });
+    realtimeService.emitToClassLecturer(classId, "attendance_updated", {
+      studentId,
+      pertemuan,
+      status,
+    });
+    realtimeService.notifyStudent(
+      studentId,
+      "pengumuman",
+      `Koreksi Kehadiran ${classCheck.code}`,
+      `Status kehadiran Anda pada Pertemuan ${pertemuan} (${classCheck.title}) telah dikoreksi dosen menjadi "${status}".`
     );
 
     res.json({
